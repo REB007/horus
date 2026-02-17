@@ -9,6 +9,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { TradePanel } from '@/components/trade-panel';
 import { MintRedeemPanel } from '@/components/mint-redeem-panel';
 import { ClaimPanel } from '@/components/claim-panel';
+import { LiquidityPanel } from '@/components/liquidity-panel';
 
 export default function MarketPage({ params }: { params: Promise<{ address: string }> }) {
   const { address } = use(params);
@@ -105,6 +106,7 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
             <>
               <TradePanel market={market} yesPrice={yesPrice} noPrice={noPrice} />
               <MintRedeemPanel market={market} />
+              <LiquidityPanel market={market} />
             </>
           )}
         </div>
