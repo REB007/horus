@@ -1,26 +1,61 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --gold: #D4AF37;
+  --gold-light: #E8C547;
+  --surface: #1a1a1a;
+  --surface-elevated: #2a2a2a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-surface: var(--surface);
+  --color-surface-elevated: var(--surface-elevated);
+  --font-sans: var(--font-space-grotesk);
+  --font-pirata: var(--font-pirata-one);
+  
+  /* Neobrutalism hard drop shadows */
+  --shadow-neo-sm: 2px 2px 0px rgba(212, 175, 55, 0.5);
+  --shadow-neo: 4px 4px 0px rgba(212, 175, 55, 0.6);
+  --shadow-neo-lg: 6px 6px 0px rgba(212, 175, 55, 0.7);
+  --shadow-neo-hover: 6px 6px 0px rgba(212, 175, 55, 0.7);
+  --shadow-neo-active: 2px 2px 0px rgba(212, 175, 55, 0.5);
+  --shadow-neo-btn: 3px 3px 0px #0a0a0a;
+  --shadow-neo-btn-hover: 4px 4px 0px #0a0a0a;
+  --shadow-neo-btn-active: 2px 2px 0px #0a0a0a;
+  --shadow-neo-inset: inset 2px 2px 0px rgba(0, 0, 0, 0.5);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Neobrutalism animations */
+@keyframes fadeInUp {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+.neo-entrance {
+  animation: fadeInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Neobrutalism hover/active utilities */
+.neo-hover {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neo-hover:hover {
+  transform: translate(-2px, -2px);
+}
+
+.neo-active:active {
+  transform: translate(1px, 1px);
 }

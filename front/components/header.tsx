@@ -1,33 +1,42 @@
 'use client';
 
 import Link from 'next/link';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { CustomConnectButton } from './custom-connect-button';
 import { BarChart3 } from 'lucide-react';
 
 export function Header() {
   return (
-    <header className="border-b border-yellow-600/30 bg-gray-900">
-      <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-2 text-xl font-bold text-yellow-500">
-              <BarChart3 className="h-6 w-6" />
-              Horus
-            </Link>
-            <nav className="hidden md:flex items-center gap-6">
-              <Link href="/" className="text-sm font-medium text-gray-300 hover:text-yellow-500 transition-colors">
-                Markets
-              </Link>
-              <Link href="/portfolio" className="text-sm font-medium text-gray-300 hover:text-yellow-500 transition-colors">
-                Portfolio
-              </Link>
-              <Link href="/admin" className="text-sm font-medium text-gray-300 hover:text-yellow-500 transition-colors">
-                Admin
-              </Link>
-            </nav>
+    <header className="border-b-2 border-[rgba(212,175,55,0.3)] bg-[#0a0a0a]">
+      <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2 neo-hover">
+          <div className="text-3xl font-bold text-[#E8C547]" style={{ textShadow: '2px 2px 0px rgba(212, 175, 55, 0.3)', fontFamily: 'var(--font-pirata-one), cursive' }}>
+            👁️ Horus
           </div>
-          <ConnectButton />
-        </div>
+        </Link>
+
+        <nav className="flex items-center justify-between flex-1 ml-8">
+          <div className="flex items-center gap-8">
+            <Link
+              href="/"
+              className="text-[#cccccc] hover:text-[#E8C547] transition-colors font-medium"
+            >
+              Markets
+            </Link>
+            <Link
+              href="/portfolio"
+              className="text-[#cccccc] hover:text-[#E8C547] transition-colors font-medium"
+            >
+              Portfolio
+            </Link>
+            <Link
+              href="/admin"
+              className="text-[#cccccc] hover:text-[#E8C547] transition-colors font-medium"
+            >
+              Admin
+            </Link>
+          </div>
+          <CustomConnectButton />
+        </nav>
       </div>
     </header>
   );

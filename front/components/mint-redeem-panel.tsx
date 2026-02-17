@@ -26,27 +26,29 @@ export function MintRedeemPanel({ market }: MintRedeemPanelProps) {
   };
 
   return (
-    <div className="bg-gray-800 border-2 border-yellow-600/40 rounded-lg p-6">
-      <h2 className="text-lg font-semibold text-gray-100 mb-4">Mint / Redeem</h2>
+    <div className="bg-[#1a1a1a] border border-[rgba(212,175,55,0.4)] rounded-xl p-6" style={{ boxShadow: '4px 4px 0px rgba(212, 175, 55, 0.6)' }}>
+      <h2 className="text-lg font-semibold text-white mb-4">Mint / Redeem</h2>
 
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setMode('mint')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors border-2 ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all border-2 neo-hover neo-active ${
             mode === 'mint'
-              ? 'bg-yellow-600 text-gray-900 border-yellow-500'
-              : 'bg-gray-900 text-gray-300 border-yellow-600/40 hover:border-yellow-500'
+              ? 'bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] border-[#0a0a0a]'
+              : 'bg-transparent text-[#999999] border-[rgba(212,175,55,0.25)]'
           }`}
+          style={{ boxShadow: mode === 'mint' ? '3px 3px 0px #0a0a0a' : '2px 2px 0px rgba(212, 175, 55, 0.2)' }}
         >
           Mint
         </button>
         <button
           onClick={() => setMode('redeem')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors border-2 ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all border-2 neo-hover neo-active ${
             mode === 'redeem'
-              ? 'bg-yellow-600 text-gray-900 border-yellow-500'
-              : 'bg-gray-900 text-gray-300 border-yellow-600/40 hover:border-yellow-500'
+              ? 'bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] border-[#0a0a0a]'
+              : 'bg-transparent text-[#999999] border-[rgba(212,175,55,0.25)]'
           }`}
+          style={{ boxShadow: mode === 'redeem' ? '3px 3px 0px #0a0a0a' : '2px 2px 0px rgba(212, 175, 55, 0.2)' }}
         >
           Redeem
         </button>
@@ -54,7 +56,7 @@ export function MintRedeemPanel({ market }: MintRedeemPanelProps) {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-2">
+          <label className="block text-sm font-medium text-[#999999] mb-2">
             {mode === 'mint' ? 'USDC Amount' : 'Token Pairs'}
           </label>
           <input
@@ -62,34 +64,36 @@ export function MintRedeemPanel({ market }: MintRedeemPanelProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-600/40 text-gray-100 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+            className="w-full px-4 py-3 bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] text-white rounded-lg focus:border-[rgba(212,175,55,0.7)] focus:outline-none transition-colors"
+            style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}
           />
         </div>
 
-        <div className="bg-gray-900 border border-yellow-600/20 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-2">
+        <div className="bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
+          <div className="text-sm text-[#999999] mb-2">
             {mode === 'mint' ? "You'll receive:" : "You'll get back:"}
           </div>
           <div className="space-y-1">
             {mode === 'mint' ? (
               <>
-                <div className="text-green-400 font-medium">{amount || '0'} YES tokens</div>
-                <div className="text-red-400 font-medium">{amount || '0'} NO tokens</div>
+                <div className="text-[#4ADE80] font-medium">{amount || '0'} YES tokens</div>
+                <div className="text-[#F87171] font-medium">{amount || '0'} NO tokens</div>
               </>
             ) : (
-              <div className="text-yellow-500 font-medium">{amount || '0'} USDC</div>
+              <div className="text-[#E8C547] font-medium">{amount || '0'} USDC</div>
             )}
           </div>
         </div>
 
         <button
           onClick={handleAction}
-          className="w-full px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-semibold rounded-lg transition-colors border-2 border-yellow-500"
+          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active"
+          style={{ boxShadow: '3px 3px 0px #0a0a0a' }}
         >
           {mode === 'mint' ? 'Mint Tokens' : 'Redeem to USDC'}
         </button>
 
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-[#666666] text-center">
           {mode === 'mint'
             ? 'Deposit USDC to receive equal YES + NO tokens at 1:1 ratio'
             : 'Burn equal YES + NO tokens to get USDC back at 1:1 ratio'}

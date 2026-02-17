@@ -42,7 +42,7 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
     <div className="container mx-auto px-4 py-8">
       <button
         onClick={() => router.push('/')}
-        className="flex items-center gap-2 text-gray-400 hover:text-yellow-500 mb-6 transition-colors"
+        className="flex items-center gap-2 text-[#999999] hover:text-[#E8C547] mb-6 transition-colors neo-hover font-medium"
       >
         <ArrowLeft className="h-4 w-4" />
         Back to markets
@@ -50,40 +50,40 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-gray-800 border-2 border-yellow-600/40 rounded-lg p-6">
-            <h1 className="text-2xl font-bold text-gray-100 mb-6">{market.question}</h1>
+          <div className="bg-[#1a1a1a] border border-[rgba(212,175,55,0.4)] rounded-xl p-6" style={{ boxShadow: '4px 4px 0px rgba(212, 175, 55, 0.6)' }}>
+            <h1 className="text-2xl font-bold text-white mb-6">{market.question}</h1>
 
             <div className="grid grid-cols-2 gap-4 mb-6">
-              <div className="bg-gray-900 border border-yellow-600/20 rounded-lg p-4">
-                <div className="text-sm text-gray-400 mb-1">YES Price</div>
-                <div className="text-3xl font-bold text-green-400">
+              <div className="bg-[#0a0a0a] border-2 border-[rgba(74,222,128,0.4)] rounded-lg p-4" style={{ boxShadow: '3px 3px 0px rgba(74, 222, 128, 0.5)' }}>
+                <div className="text-sm text-[#999999] mb-1">YES Price</div>
+                <div className="text-3xl font-bold text-[#4ADE80]">
                   {formatPercentage(yesPrice)}
                 </div>
               </div>
-              <div className="bg-gray-900 border border-yellow-600/20 rounded-lg p-4">
-                <div className="text-sm text-gray-400 mb-1">NO Price</div>
-                <div className="text-3xl font-bold text-red-400">
+              <div className="bg-[#0a0a0a] border-2 border-[rgba(248,113,113,0.4)] rounded-lg p-4" style={{ boxShadow: '3px 3px 0px rgba(248, 113, 113, 0.5)' }}>
+                <div className="text-sm text-[#999999] mb-1">NO Price</div>
+                <div className="text-3xl font-bold text-[#F87171]">
                   {formatPercentage(noPrice)}
                 </div>
               </div>
             </div>
 
-            <div className="w-full h-4 rounded-full overflow-hidden flex border border-yellow-600/20 mb-6">
+            <div className="w-full h-4 rounded-lg overflow-hidden flex border-2 border-[rgba(212,175,55,0.3)] mb-6" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
               <div
-                className="bg-green-500 transition-all"
+                className="bg-[#4ADE80] transition-all"
                 style={{ width: `${yesPrice * 100}%` }}
               />
               <div
-                className="bg-red-500 transition-all"
+                className="bg-[#F87171] transition-all"
                 style={{ width: `${noPrice * 100}%` }}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2 text-gray-400">
+              <div className="flex items-center gap-2 text-[#999999]">
                 <TrendingUp className="h-4 w-4" />
                 <span>Volume:</span>
-                <span className="font-medium text-yellow-500">
+                <span className="font-medium text-[#E8C547]">
                   ${formatUSDC(BigInt(market.totalVolume))}
                 </span>
               </div>
@@ -91,7 +91,7 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
                 <Clock className="h-4 w-4" />
                 <span>
                   {market.resolved
-                    ? <span className="text-yellow-500">Resolved</span>
+                    ? <span className="text-[#E8C547] font-medium">Resolved</span>
                     : isPast
                     ? 'Pending resolution'
                     : formatDistanceToNow(resolutionDate).replace(/^about /, '').replace(/^in /, '')}
@@ -112,30 +112,30 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
         </div>
 
         <div className="space-y-6">
-          <div className="bg-gray-800 border-2 border-yellow-600/40 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-100 mb-4">Market Info</h2>
+          <div className="bg-[#1a1a1a] border border-[rgba(212,175,55,0.4)] rounded-xl p-6" style={{ boxShadow: '4px 4px 0px rgba(212, 175, 55, 0.6)' }}>
+            <h2 className="text-lg font-semibold text-white mb-4">Market Info</h2>
             <div className="space-y-3 text-sm">
               <div>
-                <div className="text-gray-400 mb-1">Total Liquidity</div>
-                <div className="text-gray-100 font-medium">
+                <div className="text-[#999999] mb-1">Total Liquidity</div>
+                <div className="text-white font-medium">
                   ${formatUSDC(BigInt(market.yesReserve) + BigInt(market.noReserve))}
                 </div>
               </div>
               <div>
-                <div className="text-gray-400 mb-1">YES Reserve</div>
-                <div className="text-green-400 font-medium">
+                <div className="text-[#999999] mb-1">YES Reserve</div>
+                <div className="text-[#4ADE80] font-medium">
                   {formatUSDC(BigInt(market.yesReserve))} tokens
                 </div>
               </div>
               <div>
-                <div className="text-gray-400 mb-1">NO Reserve</div>
-                <div className="text-red-400 font-medium">
+                <div className="text-[#999999] mb-1">NO Reserve</div>
+                <div className="text-[#F87171] font-medium">
                   {formatUSDC(BigInt(market.noReserve))} tokens
                 </div>
               </div>
-              <div className="pt-3 border-t border-yellow-600/20">
-                <div className="text-gray-400 mb-1">Market Address</div>
-                <div className="text-xs text-gray-500 font-mono break-all">
+              <div className="pt-3 border-t border-[rgba(212,175,55,0.2)]">
+                <div className="text-[#999999] mb-1">Market Address</div>
+                <div className="text-xs text-[#666666] font-mono break-all">
                   {market.address}
                 </div>
               </div>

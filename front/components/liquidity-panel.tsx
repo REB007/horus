@@ -46,28 +46,28 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
   };
 
   return (
-    <div className="bg-gray-800 border-2 border-yellow-600/40 rounded-lg p-6">
+    <div className="bg-[#1a1a1a] border border-[rgba(212,175,55,0.4)] rounded-xl p-6" style={{ boxShadow: '4px 4px 0px rgba(212, 175, 55, 0.6)' }}>
       <div className="flex items-center gap-3 mb-6">
-        <Droplets className="h-5 w-5 text-yellow-500" />
-        <h2 className="text-lg font-semibold text-gray-100">Liquidity Provider</h2>
+        <Droplets className="h-5 w-5 text-[#E8C547]" />
+        <h2 className="text-lg font-semibold text-white">Liquidity Provider</h2>
       </div>
 
       {parseFloat(mockUserLpShares) > 0 && (
-        <div className="bg-gray-900 border border-yellow-600/20 rounded-lg p-4 mb-6">
-          <div className="text-sm text-gray-400 mb-3">Your LP Position</div>
+        <div className="bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] rounded-lg p-4 mb-6" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
+          <div className="text-sm text-[#999999] mb-3">Your LP Position</div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-xs text-gray-500 mb-1">LP Shares</div>
-              <div className="text-lg font-semibold text-yellow-500">{mockUserLpShares}</div>
+              <div className="text-xs text-[#666666] mb-1">LP Shares</div>
+              <div className="text-lg font-semibold text-[#E8C547]">{mockUserLpShares}</div>
             </div>
             <div>
-              <div className="text-xs text-gray-500 mb-1">Pool Share</div>
-              <div className="text-lg font-semibold text-yellow-500">{poolPercentage}%</div>
+              <div className="text-xs text-[#666666] mb-1">Pool Share</div>
+              <div className="text-lg font-semibold text-[#E8C547]">{poolPercentage}%</div>
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-yellow-600/20">
-            <div className="text-xs text-gray-500 mb-1">Estimated Value</div>
-            <div className="text-lg font-semibold text-gray-100">
+          <div className="mt-3 pt-3 border-t border-[rgba(212,175,55,0.2)]">
+            <div className="text-xs text-[#666666] mb-1">Estimated Value</div>
+            <div className="text-lg font-semibold text-white">
               ${estimateUsdcOut(mockUserLpShares)} USDC
             </div>
           </div>
@@ -77,21 +77,23 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setMode('add')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors border-2 ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all border-2 neo-hover neo-active ${
             mode === 'add'
-              ? 'bg-yellow-600 text-gray-900 border-yellow-500'
-              : 'bg-gray-900 text-gray-300 border-yellow-600/40 hover:border-yellow-500'
+              ? 'bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] border-[#0a0a0a]'
+              : 'bg-transparent text-[#999999] border-[rgba(212,175,55,0.25)]'
           }`}
+          style={{ boxShadow: mode === 'add' ? '3px 3px 0px #0a0a0a' : '2px 2px 0px rgba(212, 175, 55, 0.2)' }}
         >
           Add Liquidity
         </button>
         <button
           onClick={() => setMode('remove')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors border-2 ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all border-2 neo-hover neo-active ${
             mode === 'remove'
-              ? 'bg-yellow-600 text-gray-900 border-yellow-500'
-              : 'bg-gray-900 text-gray-300 border-yellow-600/40 hover:border-yellow-500'
+              ? 'bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] border-[#0a0a0a]'
+              : 'bg-transparent text-[#999999] border-[rgba(212,175,55,0.25)]'
           }`}
+          style={{ boxShadow: mode === 'remove' ? '3px 3px 0px #0a0a0a' : '2px 2px 0px rgba(212, 175, 55, 0.2)' }}
         >
           Remove Liquidity
         </button>
@@ -99,7 +101,7 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-2">
+          <label className="block text-sm font-medium text-[#999999] mb-2">
             {mode === 'add' ? 'USDC Amount' : 'LP Shares'}
           </label>
           <input
@@ -107,29 +109,30 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-600/40 text-gray-100 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+            className="w-full px-4 py-3 bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] text-white rounded-lg focus:border-[rgba(212,175,55,0.7)] focus:outline-none transition-colors"
+            style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}
           />
         </div>
 
-        <div className="bg-gray-900 border border-yellow-600/20 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-2">
+        <div className="bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
+          <div className="text-sm text-[#999999] mb-2">
             {mode === 'add' ? "You'll receive:" : "You'll get back:"}
           </div>
           {mode === 'add' ? (
             <div className="space-y-1">
-              <div className="text-yellow-500 font-medium">
+              <div className="text-[#E8C547] font-medium">
                 {estimateLpShares(amount)} LP shares
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-[#666666]">
                 Pool share: {((parseFloat(estimateLpShares(amount)) / parseFloat(mockTotalLpShares)) * 100).toFixed(4)}%
               </div>
             </div>
           ) : (
             <div className="space-y-1">
-              <div className="text-yellow-500 font-medium">
+              <div className="text-[#E8C547] font-medium">
                 ~{estimateUsdcOut(amount)} USDC
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-[#666666]">
                 Plus any excess YES/NO tokens
               </div>
             </div>
@@ -138,12 +141,13 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
 
         <button
           onClick={handleAction}
-          className="w-full px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-semibold rounded-lg transition-colors border-2 border-yellow-500"
+          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active"
+          style={{ boxShadow: '3px 3px 0px #0a0a0a' }}
         >
           {mode === 'add' ? 'Add Liquidity' : 'Remove Liquidity'}
         </button>
 
-        <p className="text-xs text-gray-500 text-center">
+        <p className="text-xs text-[#666666] text-center">
           {mode === 'add'
             ? 'Provide liquidity to earn 2% trading fees'
             : 'Remove your liquidity position and receive USDC + excess tokens'}

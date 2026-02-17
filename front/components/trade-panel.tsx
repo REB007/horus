@@ -45,25 +45,27 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
   };
 
   return (
-    <div className="bg-gray-800 border-2 border-yellow-600/40 rounded-lg p-6">
+    <div className="bg-[#1a1a1a] border border-[rgba(212,175,55,0.4)] rounded-xl p-6" style={{ boxShadow: '4px 4px 0px rgba(212, 175, 55, 0.6)' }}>
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setMode('buy')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors border-2 ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all border-2 neo-hover neo-active ${
             mode === 'buy'
-              ? 'bg-yellow-600 text-gray-900 border-yellow-500'
-              : 'bg-gray-900 text-gray-300 border-yellow-600/40 hover:border-yellow-500'
+              ? 'bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] border-[#0a0a0a]'
+              : 'bg-transparent text-[#999999] border-[rgba(212,175,55,0.25)]'
           }`}
+          style={{ boxShadow: mode === 'buy' ? '3px 3px 0px #0a0a0a' : '2px 2px 0px rgba(212, 175, 55, 0.2)' }}
         >
           Buy
         </button>
         <button
           onClick={() => setMode('sell')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors border-2 ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all border-2 neo-hover neo-active ${
             mode === 'sell'
-              ? 'bg-yellow-600 text-gray-900 border-yellow-500'
-              : 'bg-gray-900 text-gray-300 border-yellow-600/40 hover:border-yellow-500'
+              ? 'bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] border-[#0a0a0a]'
+              : 'bg-transparent text-[#999999] border-[rgba(212,175,55,0.25)]'
           }`}
+          style={{ boxShadow: mode === 'sell' ? '3px 3px 0px #0a0a0a' : '2px 2px 0px rgba(212, 175, 55, 0.2)' }}
         >
           Sell
         </button>
@@ -72,21 +74,23 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setSide('yes')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors border-2 ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all border-2 neo-hover neo-active ${
             side === 'yes'
-              ? 'bg-green-600 text-white border-green-500'
-              : 'bg-gray-900 text-gray-300 border-green-600/40 hover:border-green-500'
+              ? 'bg-[#4ADE80] text-white border-[rgba(74,222,128,0.6)]'
+              : 'bg-transparent text-[#999999] border-[rgba(74,222,128,0.3)]'
           }`}
+          style={{ boxShadow: side === 'yes' ? '3px 3px 0px rgba(74, 222, 128, 0.5)' : '2px 2px 0px rgba(74, 222, 128, 0.2)' }}
         >
           YES {formatPercentage(yesPrice)}
         </button>
         <button
           onClick={() => setSide('no')}
-          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors border-2 ${
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all border-2 neo-hover neo-active ${
             side === 'no'
-              ? 'bg-red-600 text-white border-red-500'
-              : 'bg-gray-900 text-gray-300 border-red-600/40 hover:border-red-500'
+              ? 'bg-[#F87171] text-white border-[rgba(248,113,113,0.6)]'
+              : 'bg-transparent text-[#999999] border-[rgba(248,113,113,0.3)]'
           }`}
+          style={{ boxShadow: side === 'no' ? '3px 3px 0px rgba(248, 113, 113, 0.5)' : '2px 2px 0px rgba(248, 113, 113, 0.2)' }}
         >
           NO {formatPercentage(noPrice)}
         </button>
@@ -94,7 +98,7 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
 
       <div className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-2">
+          <label className="block text-sm font-medium text-[#999999] mb-2">
             {mode === 'buy' ? 'USDC Amount' : `${side.toUpperCase()} Tokens`}
           </label>
           <input
@@ -102,7 +106,8 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full px-4 py-3 bg-gray-900 border-2 border-yellow-600/40 text-gray-100 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+            className="w-full px-4 py-3 bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] text-white rounded-lg focus:border-[rgba(212,175,55,0.7)] focus:outline-none transition-colors"
+            style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}
           />
         </div>
 
@@ -110,9 +115,9 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
           <ArrowDownUp className="h-5 w-5 text-gray-500" />
         </div>
 
-        <div className="bg-gray-900 border border-yellow-600/20 rounded-lg p-4">
-          <div className="text-sm text-gray-400 mb-1">You'll receive</div>
-          <div className="text-2xl font-bold text-yellow-500">
+        <div className="bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
+          <div className="text-sm text-[#999999] mb-1">You'll receive</div>
+          <div className="text-2xl font-bold text-[#E8C547]">
             {mode === 'buy' ? estimateTokensOut(amount) : estimateUsdcOut(amount)}{' '}
             {mode === 'buy' ? side.toUpperCase() : 'USDC'}
           </div>
@@ -120,7 +125,8 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
 
         <button
           onClick={handleTrade}
-          className="w-full px-6 py-3 bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-semibold rounded-lg transition-colors border-2 border-yellow-500"
+          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active"
+          style={{ boxShadow: '3px 3px 0px #0a0a0a' }}
         >
           {mode === 'buy' ? 'Buy' : 'Sell'} {side.toUpperCase()}
         </button>

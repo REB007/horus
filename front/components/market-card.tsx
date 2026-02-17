@@ -20,49 +20,49 @@ export function MarketCard({ market }: MarketCardProps) {
 
   return (
     <Link href={`/market/${market.address}`}>
-      <div className="bg-gray-800 rounded-lg border-2 border-yellow-600/40 p-6 hover:border-yellow-500 hover:shadow-xl hover:shadow-yellow-600/20 transition-all cursor-pointer">
+      <div className="bg-[#1a1a1a] rounded-xl border border-[rgba(212,175,55,0.4)] p-6 cursor-pointer neo-hover neo-active transition-all" style={{ boxShadow: '4px 4px 0px rgba(212, 175, 55, 0.6)' }} onMouseEnter={(e) => e.currentTarget.style.boxShadow = '6px 6px 0px rgba(212, 175, 55, 0.7)'} onMouseLeave={(e) => e.currentTarget.style.boxShadow = '4px 4px 0px rgba(212, 175, 55, 0.6)'} onMouseDown={(e) => e.currentTarget.style.boxShadow = '2px 2px 0px rgba(212, 175, 55, 0.5)'} onMouseUp={(e) => e.currentTarget.style.boxShadow = '6px 6px 0px rgba(212, 175, 55, 0.7)'}>
         <div className="mb-4">
-          <h3 className="text-lg font-semibold text-gray-100 mb-4">
+          <h3 className="text-lg font-semibold text-white mb-4">
             {market.question}
           </h3>
 
           <div className="flex items-center justify-between text-sm mb-2">
             <div className="flex items-center gap-2">
-              <span className={`font-medium ${isResolved && market.yesWins ? 'text-yellow-500' : 'text-gray-400'}`}>YES</span>
-              <span className="font-mono font-semibold text-green-400">
+              <span className={`font-medium ${isResolved && market.yesWins ? 'text-[#E8C547]' : 'text-[#999999]'}`}>YES</span>
+              <span className="font-mono font-semibold text-[#4ADE80]">
                 {formatPercentage(yesPrice)}
               </span>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="font-mono font-semibold text-red-400">
+              <span className="font-mono font-semibold text-[#F87171]">
                 {formatPercentage(noPrice)}
               </span>
-              <span className={`font-medium ${isResolved && !market.yesWins ? 'text-yellow-500' : 'text-gray-400'}`}>NO</span>
+              <span className={`font-medium ${isResolved && !market.yesWins ? 'text-[#E8C547]' : 'text-[#999999]'}`}>NO</span>
             </div>
           </div>
 
-          <div className="w-full h-3 rounded-full overflow-hidden flex border border-yellow-600/20">
+          <div className="w-full h-3 rounded-lg overflow-hidden flex border-2 border-[rgba(212,175,55,0.3)]" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
             <div
-              className="bg-green-500 transition-all"
+              className="bg-[#4ADE80] transition-all"
               style={{ width: `${yesPrice * 100}%` }}
             />
             <div
-              className="bg-red-500 transition-all"
+              className="bg-[#F87171] transition-all"
               style={{ width: `${noPrice * 100}%` }}
             />
           </div>
         </div>
 
-        <div className="flex items-center justify-between text-sm text-gray-400 pt-4 border-t border-yellow-600/20">
+        <div className="flex items-center justify-between text-sm text-[#999999] pt-4 border-t border-[rgba(212,175,55,0.2)]">
           <div className="flex items-center gap-1">
             <TrendingUp className="h-4 w-4" />
-            <span className="font-medium text-yellow-500">${formatUSDC(BigInt(market.totalVolume))}</span>
-            <span className="text-gray-500">volume</span>
+            <span className="font-medium text-[#E8C547]">${formatUSDC(BigInt(market.totalVolume))}</span>
+            <span className="text-[#666666]">volume</span>
           </div>
           <div className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
-            <span className={isResolved ? 'text-yellow-500' : ''}>
+            <span className={isResolved ? 'text-[#E8C547] font-medium' : ''}>
               {isResolved
                 ? 'Resolved'
                 : isPast

@@ -1,0 +1,278 @@
+neobrutalism_conversion:
+  description: Convert entire frontend to neobrutalism style with golden shadows
+  
+  global:
+    - id: global-1
+      task: Update Tailwind config with neobrutalism utilities
+      status: pending
+      files: [tailwind.config.ts]
+      notes: Add custom shadows, animations, border utilities
+    
+    - id: global-2
+      task: Create neobrutalism CSS utilities file
+      status: pending
+      files: [app/globals.css]
+      notes: Add custom animations, transitions, shadow classes
+
+  layout:
+    - id: layout-1
+      task: Update root layout background and typography
+      status: pending
+      files: [app/layout.tsx]
+      notes: Set base background, add text shadows to headings
+    
+    - id: layout-2
+      task: Transform header with thick borders and shadows
+      status: pending
+      files: [components/header.tsx]
+      notes: Thick bottom border, logo text shadow, nav hover effects
+
+  homepage:
+    - id: home-1
+      task: Update search input to neobrutalism style
+      status: pending
+      files: [app/page.tsx]
+      notes: Thick border, inset shadow, focus ring
+    
+    - id: home-2
+      task: Transform filter tabs with active state
+      status: pending
+      files: [app/page.tsx]
+      notes: Active tab lifts with shadow, inactive has subtle shadow
+    
+    - id: home-3
+      task: Update sort dropdown to neobrutalism
+      status: pending
+      files: [app/page.tsx]
+      notes: Thick border, golden shadow on open
+
+  market_cards:
+    - id: card-1
+      task: Transform MarketCard with thick borders and golden shadow
+      status: pending
+      files: [components/market-card.tsx]
+      notes: 4px border, 8px golden shadow, hover lift effect
+    
+    - id: card-2
+      task: Add press-down animation on click
+      status: pending
+      files: [components/market-card.tsx]
+      notes: Active state translates down, reduces shadow
+    
+    - id: card-3
+      task: Update probability bar to brutalist style
+      status: pending
+      files: [components/market-card.tsx]
+      notes: Thick borders, no rounding, sharp color blocks
+    
+    - id: card-4
+      task: Transform MarketCardSkeleton
+      status: pending
+      files: [components/market-card-skeleton.tsx]
+      notes: Match new card style with animated shimmer
+
+  market_detail:
+    - id: detail-1
+      task: Update market detail header cards
+      status: pending
+      files: [app/market/[address]/page.tsx]
+      notes: Price cards with thick borders and shadows
+    
+    - id: detail-2
+      task: Transform back button with hover effect
+      status: pending
+      files: [app/market/[address]/page.tsx]
+      notes: Golden border, lift on hover
+    
+    - id: detail-3
+      task: Update market info sidebar
+      status: pending
+      files: [app/market/[address]/page.tsx]
+      notes: Thick border, layered shadow effect
+
+  trade_panel:
+    - id: trade-1
+      task: Transform Buy/Sell tabs with active state
+      status: pending
+      files: [components/trade-panel.tsx]
+      notes: Active tab lifts with black shadow, golden background
+    
+    - id: trade-2
+      task: Update YES/NO toggle buttons
+      status: pending
+      files: [components/trade-panel.tsx]
+      notes: Active button pops with shadow, color-coded borders
+    
+    - id: trade-3
+      task: Transform amount input field
+      status: pending
+      files: [components/trade-panel.tsx]
+      notes: Thick border, inset shadow, focus ring animation
+    
+    - id: trade-4
+      task: Update estimate display card
+      status: pending
+      files: [components/trade-panel.tsx]
+      notes: Thick border, subtle shadow, bold numbers
+    
+    - id: trade-5
+      task: Transform trade action button
+      status: pending
+      files: [components/trade-panel.tsx]
+      notes: Primary button style, press effect, bounce on hover
+
+  mint_redeem_panel:
+    - id: mint-1
+      task: Transform Mint/Redeem tabs
+      status: pending
+      files: [components/mint-redeem-panel.tsx]
+      notes: Same style as trade tabs
+    
+    - id: mint-2
+      task: Update input and estimate display
+      status: pending
+      files: [components/mint-redeem-panel.tsx]
+      notes: Match trade panel style
+    
+    - id: mint-3
+      task: Transform action button
+      status: pending
+      files: [components/mint-redeem-panel.tsx]
+      notes: Primary button with press effect
+
+  liquidity_panel:
+    - id: lp-1
+      task: Transform LP position display card
+      status: pending
+      files: [components/liquidity-panel.tsx]
+      notes: Thick border, golden shadow, bold stats
+    
+    - id: lp-2
+      task: Update Add/Remove tabs
+      status: pending
+      files: [components/liquidity-panel.tsx]
+      notes: Match other tab styles
+    
+    - id: lp-3
+      task: Transform input and estimate display
+      status: pending
+      files: [components/liquidity-panel.tsx]
+      notes: Match trade panel style
+    
+    - id: lp-4
+      task: Update action button
+      status: pending
+      files: [components/liquidity-panel.tsx]
+      notes: Primary button style
+
+  claim_panel:
+    - id: claim-1
+      task: Transform claim panel with trophy emphasis
+      status: pending
+      files: [components/claim-panel.tsx]
+      notes: Extra thick border, large golden shadow
+    
+    - id: claim-2
+      task: Update winning outcome display
+      status: pending
+      files: [components/claim-panel.tsx]
+      notes: Huge text with shadow, animated entrance
+    
+    - id: claim-3
+      task: Transform claim button with emphasis
+      status: pending
+      files: [components/claim-panel.tsx]
+      notes: Large shadow (12px), strong press effect
+
+  portfolio_page:
+    - id: portfolio-1
+      task: Transform claimable winnings section
+      status: pending
+      files: [app/portfolio/page.tsx]
+      notes: Thick border, golden shadow, "Claim All" button emphasis
+    
+    - id: portfolio-2
+      task: Update position cards
+      status: pending
+      files: [app/portfolio/page.tsx]
+      notes: Thick borders, hover lift effect
+    
+    - id: portfolio-3
+      task: Transform individual claim buttons
+      status: pending
+      files: [app/portfolio/page.tsx]
+      notes: Secondary button style with hover effect
+    
+    - id: portfolio-4
+      task: Update wallet connection prompt
+      status: pending
+      files: [app/portfolio/page.tsx]
+      notes: Large card with emphasis shadow
+
+  admin_page:
+    - id: admin-1
+      task: Transform create market form
+      status: pending
+      files: [app/admin/page.tsx]
+      notes: All inputs with thick borders, inset shadows
+    
+    - id: admin-2
+      task: Update create button with emphasis
+      status: pending
+      files: [app/admin/page.tsx]
+      notes: Extra large shadow (12px), strong press effect
+    
+    - id: admin-3
+      task: Transform resolve market cards
+      status: pending
+      files: [app/admin/page.tsx]
+      notes: Thick borders, ready-to-resolve highlighted with golden glow
+    
+    - id: admin-4
+      task: Update YES/NO resolve buttons
+      status: pending
+      files: [app/admin/page.tsx]
+      notes: Color-coded with matching shadows, press effect
+    
+    - id: admin-5
+      task: Transform auto-resolver status panel
+      status: pending
+      files: [app/admin/page.tsx]
+      notes: Thick border, layered shadow
+    
+    - id: admin-6
+      task: Update access denied screen
+      status: pending
+      files: [app/admin/page.tsx]
+      notes: Large card with red accent shadow
+
+summary:
+  total_tasks: 43
+  completed: 0
+  pending: 43
+  
+  categories:
+    global: 2
+    layout: 2
+    homepage: 3
+    market_cards: 4
+    market_detail: 3
+    trade_panel: 5
+    mint_redeem_panel: 3
+    liquidity_panel: 4
+    claim_panel: 3
+    portfolio_page: 4
+    admin_page: 6
+
+notes:
+  - All shadows are HARD DROP SHADOWS (offset, NO BLUR): Xpx Ypx 0px color
+  - Shadow color: rgba(212, 175, 55, 0.4-0.7) for golden shadows
+  - Border width: 1-2px standard, 2px for emphasis
+  - Border color: rgba(212, 175, 55, 0.3-0.6) for standard, higher opacity for emphasis
+  - Hover: translate(-2px, -2px) with increased shadow offset (e.g., 4px → 6px)
+  - Active: translate(1px, 1px) with decreased shadow offset (e.g., 4px → 2px)
+  - Transition: cubic-bezier(0.4, 0, 0.2, 1) for smooth effect (0.2s)
+  - Dark mode coherence: #0a0a0a background, #1a1a1a surfaces, high contrast text (#FFFFFF)
+  - Use rounded corners: 8px standard, 12px for large cards, 6px for small elements
+  - Color palette: #D4AF37 (soft gold), #4ADE80 (soft green), #F87171 (soft red)
+  - Ensure all text is readable on dark backgrounds (minimum #999999 for muted text)
