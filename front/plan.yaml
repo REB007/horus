@@ -1,0 +1,294 @@
+project: Horus Frontend
+sprint: Hackathon Sprint
+story_point_scale:
+  1: Trivial (< 30 min)
+  2: Small (~1h)
+  3: Medium (~2-3h)
+  5: Large (~half day)
+  8: XL (~full day)
+
+epics:
+  - id: epic-1
+    name: Project Scaffolding & Infra
+    total_points: 12
+    completed_points: 12
+    status: done
+    stories:
+      - id: "1.1"
+        title: Scaffold Next.js 14 App Router project
+        points: 1
+        status: done
+        notes: TypeScript, Tailwind CSS, ESLint configured
+      
+      - id: "1.2"
+        title: Install & configure wagmi v2 + viem + RainbowKit
+        points: 3
+        status: done
+        notes: Providers setup, Base + Base Sepolia chains configured
+      
+      - id: "1.3"
+        title: Create API client module
+        points: 3
+        status: done
+        notes: lib/api.ts with typed functions for all Go backend endpoints
+      
+      - id: "1.4"
+        title: Set up shared types
+        points: 2
+        status: done
+        notes: types/market.ts with Market, Price, Position, Claimable, TxData
+      
+      - id: "1.5"
+        title: Global layout
+        points: 2
+        status: done
+        notes: Header with nav, wallet connect, responsive layout
+      
+      - id: "1.6"
+        title: Environment config
+        points: 1
+        status: done
+        notes: .env.local with API_URL, CHAIN_ID, contract addresses
+
+  - id: epic-2
+    name: Market List Page
+    total_points: 9
+    completed_points: 9
+    status: done
+    stories:
+      - id: "2.1"
+        title: MarketCard component
+        points: 3
+        status: done
+        notes: Dark mode with golden borders, single probability bar, winning side in golden
+      
+      - id: "2.2"
+        title: Market list page
+        points: 3
+        status: done
+        notes: Grid layout with mock data, loading skeleton, empty state
+      
+      - id: "2.3"
+        title: Market filtering/sorting
+        points: 2
+        status: done
+        notes: All/Active/Resolved tabs, sort by volume/newest/ending soon
+      
+      - id: "2.4"
+        title: Search bar
+        points: 1
+        status: done
+        notes: Real-time client-side search by question text
+
+  - id: epic-3
+    name: Market Detail & Trading Page
+    total_points: 32
+    completed_points: 32
+    status: done
+    stories:
+      - id: "3.1"
+        title: Market header section
+        points: 3
+        status: done
+        notes: Question, countdown, large price cards, probability bar
+      
+      - id: "3.2"
+        title: Price chart / probability display
+        points: 5
+        status: done
+        notes: Probability bar with YES/NO percentages, price cards
+      
+      - id: "3.3"
+        title: Trade panel - Buy flow
+        points: 5
+        status: done
+        notes: Buy/Sell tabs, YES/NO toggle, USDC input, live estimates
+      
+      - id: "3.4"
+        title: Trade panel - Sell flow
+        points: 5
+        status: done
+        notes: Sell mode with token input, USDC estimate, toast feedback
+      
+      - id: "3.5"
+        title: USDC approval handling
+        points: 3
+        status: done
+        notes: Mock approval flow ready for wagmi integration
+      
+      - id: "3.6"
+        title: Transaction status feedback
+        points: 3
+        status: done
+        notes: Toast notifications with react-hot-toast
+      
+      - id: "3.7"
+        title: Mint & Redeem panel
+        points: 3
+        status: done
+        notes: Mint/Redeem tabs, shows equal YES+NO output, 1:1 ratio
+      
+      - id: "3.8"
+        title: Claim panel (post-resolution)
+        points: 3
+        status: done
+        notes: Trophy icon, winning outcome in golden, claim button
+      
+      - id: "3.9"
+        title: Market info sidebar
+        points: 2
+        status: done
+        notes: Liquidity, reserves, market address
+
+  - id: epic-4
+    name: Liquidity Provider Panel
+    total_points: 9
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "4.1"
+        title: Add Liquidity form
+        points: 3
+        status: backlog
+        notes: USDC input, LP shares estimate, submit
+      
+      - id: "4.2"
+        title: Remove Liquidity form
+        points: 3
+        status: backlog
+        notes: LP share input, USDC + tokens estimate
+      
+      - id: "4.3"
+        title: LP position display
+        points: 3
+        status: backlog
+        notes: Show LP shares, pool %, earned fees
+
+  - id: epic-5
+    name: Portfolio Page
+    total_points: 12
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "5.1"
+        title: Positions table
+        points: 5
+        status: backlog
+        notes: Markets with YES/NO tokens, current value, PnL
+      
+      - id: "5.2"
+        title: Claimable winnings section
+        points: 3
+        status: backlog
+        notes: Resolved markets, claim buttons
+      
+      - id: "5.3"
+        title: LP positions section
+        points: 3
+        status: backlog
+        notes: LP shares, pool %, value estimate
+      
+      - id: "5.4"
+        title: Empty / not-connected state
+        points: 1
+        status: backlog
+        notes: Prompt wallet connection, empty state
+
+  - id: epic-6
+    name: Admin Panel
+    total_points: 12
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "6.1"
+        title: Create Market form
+        points: 5
+        status: backlog
+        notes: Question, resolution time, initial liquidity
+      
+      - id: "6.2"
+        title: Resolve Market panel
+        points: 3
+        status: backlog
+        notes: List unresolved markets, YES/NO buttons
+      
+      - id: "6.3"
+        title: Admin auth gate
+        points: 2
+        status: backlog
+        notes: Check wallet against admin address
+      
+      - id: "6.4"
+        title: Auto-resolver status view
+        points: 2
+        status: backlog
+        notes: Display configured markets, next check time
+
+  - id: epic-7
+    name: Polish & UX
+    total_points: 12
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "7.1"
+        title: Responsive design pass
+        points: 3
+        status: backlog
+        notes: Mobile-first layout, 375px+ screens
+      
+      - id: "7.2"
+        title: Loading states & skeletons
+        points: 2
+        status: backlog
+        notes: Consistent skeleton components
+      
+      - id: "7.3"
+        title: Error boundary & fallback UI
+        points: 2
+        status: backlog
+        notes: Global error boundary, retry options
+      
+      - id: "7.4"
+        title: Toast / notification system
+        points: 2
+        status: backlog
+        notes: Unified toast for tx success/error
+      
+      - id: "7.5"
+        title: Dark mode
+        points: 2
+        status: backlog
+        notes: Tailwind dark mode, system preference
+      
+      - id: "7.6"
+        title: SEO & metadata
+        points: 1
+        status: backlog
+        notes: Page titles, OG tags, favicon
+
+summary:
+  total_story_points: 98
+  completed_story_points: 53
+  in_progress_story_points: 0
+  testing_story_points: 0
+  backlog_story_points: 45
+  completion_percentage: 54.1%
+
+current_sprint_focus:
+  - Epic 4 (LP Panel) - next priority (9 pts)
+  - Epic 5 (Portfolio) - 12 pts
+  - Epic 6 (Admin) - 12 pts
+  - Epic 7 (Polish) - 12 pts
+
+dependencies:
+  - Go backend must be running for Epic 2+
+  - Contracts deployed to Base Sepolia for Epic 3+
+  - Test USDC needed for trading flows
+
+notes:
+  - Foundation complete (Epic 1) - wagmi, RainbowKit, API client, types all set up
+  - Market list page complete (Epic 2) - dark mode with golden theme
+  - Market detail & trading complete (Epic 3) - buy/sell/mint/redeem/claim all functional
+  - Using mock data for development, ready to swap to real API
+  - Dev server running at localhost:3000
+  - 54% complete - core trading features done
