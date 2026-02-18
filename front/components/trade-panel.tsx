@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ArrowDownUp } from 'lucide-react';
 import type { Market } from '@/types/market';
-import { formatPercentage, parseUSDC, formatUSDC } from '@/lib/utils';
+import { formatPercentage, parseUSDC, formatUSDC, bpsToFloat } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 interface TradePanelProps {
@@ -36,11 +36,11 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
       toast.error('Please enter an amount');
       return;
     }
-
-    toast.success(
-      `${mode === 'buy' ? 'Buying' : 'Selling'} ${side.toUpperCase()} - Transaction would be sent to wallet`,
-      { duration: 3000 }
-    );
+    const verb = mode === 'buy' ? 'Buying' : 'Selling';
+    const label = mode === 'buy'
+      ? `${estimateTokensOut(amount)} ${side.toUpperCase()} tokens for $${amount} USDC`
+      : `${amount} ${side.toUpperCase()} tokens for ~$${estimateUsdcOut(amount)} USDC`;
+    toast.success(`${verb} $${market.tokenSymbol} ${side.toUpperCase()} — ${label} — TX would be sent`, { duration: 3000 });
     setAmount('');
   };
 

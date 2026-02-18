@@ -16,3 +16,7 @@ export function parseUSDC(amount: string): bigint {
 export function formatPercentage(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
+
+export function bpsToFloat(bps: string): number {
+  return parseInt(bps) / 10000;
+}

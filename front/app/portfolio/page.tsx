@@ -1,61 +1,23 @@
 'use client';
 
-import { useState } from 'react';
 import { useAccount } from 'wagmi';
-import { Wallet, TrendingUp, Droplets, Trophy } from 'lucide-react';
+import { Wallet, TrendingUp, Trophy } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { mockMarkets, calculateYesPrice } from '@/lib/mock-data';
-import { formatUSDC, formatPercentage } from '@/lib/utils';
+import { mockPositions, mockClaimable, mockMarkets } from '@/lib/mock-data';
+import { formatUSDC, formatPercentage, bpsToFloat } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 export default function PortfolioPage() {
-  const { address, isConnected } = useAccount();
+  const { isConnected } = useAccount();
 
-  const mockPositions = [
-    {
-      marketAddress: mockMarkets[0].address,
-      question: mockMarkets[0].question,
-      yesBalance: '150',
-      noBalance: '0',
-      lpShares: '0',
-    },
-    {
-      marketAddress: mockMarkets[1].address,
-      question: mockMarkets[1].question,
-      yesBalance: '0',
-      noBalance: '200',
-      lpShares: '0',
-    },
-    {
-      marketAddress: mockMarkets[2].address,
-      question: mockMarkets[2].question,
-      yesBalance: '50',
-      noBalance: '50',
-      lpShares: '1234',
-    },
-  ];
-
-  const mockClaimable = [
-    {
-      marketAddress: mockMarkets[4].address,
-      question: mockMarkets[4].question,
-      yesWins: true,
-      winningBalance: '150',
-    },
-  ];
-
-  const handleClaim = (marketAddress: string, amount: string) => {
-    toast.success(`Claiming ${amount} USDC - Transaction would be sent to wallet`, {
-      duration: 3000,
-    });
+  const handleClaim = (symbol: string, amount: string) => {
+    toast.success(`Claiming $${formatUSDC(BigInt(amount))} USDC from $${symbol} market — TX would be sent`, { duration: 3000 });
   };
 
   const handleClaimAll = () => {
-    const total = mockClaimable.reduce((sum, c) => sum + parseFloat(c.winningBalance), 0);
-    toast.success(`Claiming ${total} USDC from ${mockClaimable.length} markets - Transaction would be sent to wallet`, {
-      duration: 3000,
-    });
+    const total = mockClaimable.reduce((sum, c) => sum + BigInt(c.claimableAmount), 0n);
+    toast.success(`Claiming $${formatUSDC(total)} USDC from ${mockClaimable.length} markets — TX would be sent`, { duration: 3000 });
   };
 
   if (!isConnected) {
@@ -64,19 +26,15 @@ export default function PortfolioPage() {
         <div className="text-center py-20">
           <Wallet className="h-16 w-16 text-[#E8C547] mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-4">Connect Your Wallet</h1>
-          <p className="text-[#999999] mb-8">
-            Connect your wallet to view your positions and claimable winnings
-          </p>
-          <div className="flex justify-center">
-            <ConnectButton />
-          </div>
+          <p className="text-[#999999] mb-8">Connect your wallet to view your positions and claimable winnings</p>
+          <div className="flex justify-center"><ConnectButton /></div>
         </div>
       </div>
     );
   }
 
   const hasPositions = mockPositions.some(
-    (p) => parseFloat(p.yesBalance) > 0 || parseFloat(p.noBalance) > 0 || parseFloat(p.lpShares) > 0
+    (p) => BigInt(p.yesBalance) > 0n || BigInt(p.noBalance) > 0n || BigInt(p.lpBalance) > 0n
   );
 
   return (
@@ -101,45 +59,33 @@ export default function PortfolioPage() {
               Claim All
             </button>
           </div>
-
           <div className="space-y-4">
-            {mockClaimable.map((claim) => {
-              const market = mockMarkets.find((m) => m.address === claim.marketAddress);
-              if (!market) return null;
-
-              return (
-                <div
-                  key={claim.marketAddress}
-                  className="bg-[#0a0a0a] border border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: '2px 2px 0px rgba(212, 175, 55, 0.4)' }}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <Link
-                        href={`/market/${claim.marketAddress}`}
-                        className="text-white font-medium hover:text-[#E8C547] transition-colors"
-                      >
-                        {claim.question}
-                      </Link>
-                      <div className="flex items-center gap-4 mt-2 text-sm">
-                        <span className="text-[#E8C547] font-medium">
-                          {claim.yesWins ? 'YES' : 'NO'} wins
-                        </span>
-                        <span className="text-[#999999]">
-                          {claim.winningBalance} tokens → {claim.winningBalance} USDC
-                        </span>
-                      </div>
+            {mockClaimable.map((claim) => (
+              <div key={claim.marketAddress} className="bg-[#0a0a0a] border border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: '2px 2px 0px rgba(212, 175, 55, 0.4)' }}>
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <Link href={`/market/${claim.marketAddress}`} className="text-white font-medium hover:text-[#E8C547] transition-colors">
+                      {claim.question}
+                    </Link>
+                    <div className="flex items-center gap-4 mt-2 text-sm">
+                      <span className={`font-medium ${claim.yesWins ? 'text-[#4ADE80]' : 'text-[#F87171]'}`}>
+                        {claim.yesWins ? 'YES' : 'NO'} wins
+                      </span>
+                      <span className="text-[#999999]">
+                        {formatUSDC(BigInt(claim.claimableAmount))} tokens → ${formatUSDC(BigInt(claim.claimableAmount))} USDC
+                      </span>
                     </div>
-                    <button
-                      onClick={() => handleClaim(claim.marketAddress, claim.winningBalance)}
-                      className="px-4 py-2 bg-transparent text-[#E8C547] font-medium rounded-lg transition-all border-2 border-[rgba(212,175,55,0.5)] neo-hover neo-active"
-                      style={{ boxShadow: '2px 2px 0px rgba(212, 175, 55, 0.4)' }}
-                    >
-                      Claim
-                    </button>
                   </div>
+                  <button
+                    onClick={() => handleClaim(claim.tokenSymbol, claim.claimableAmount)}
+                    className="px-4 py-2 bg-transparent text-[#E8C547] font-medium rounded-lg transition-all border-2 border-[rgba(212,175,55,0.5)] neo-hover neo-active"
+                    style={{ boxShadow: '2px 2px 0px rgba(212, 175, 55, 0.4)' }}
+                  >
+                    Claim
+                  </button>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -153,12 +99,7 @@ export default function PortfolioPage() {
         {!hasPositions ? (
           <div className="text-center py-12">
             <p className="text-[#999999]">No active positions</p>
-            <Link
-              href="/"
-              className="text-[#E8C547] hover:text-[#D4AF37] text-sm mt-2 inline-block"
-            >
-              Browse markets →
-            </Link>
+            <Link href="/" className="text-[#E8C547] hover:text-[#D4AF37] text-sm mt-2 inline-block">Browse markets →</Link>
           </div>
         ) : (
           <div className="space-y-4">
@@ -166,54 +107,47 @@ export default function PortfolioPage() {
               const market = mockMarkets.find((m) => m.address === position.marketAddress);
               if (!market) return null;
 
-              const yesPrice = calculateYesPrice(market.yesReserve, market.noReserve);
-              const noPrice = 1 - yesPrice;
-              const yesValue = parseFloat(position.yesBalance) * yesPrice;
-              const noValue = parseFloat(position.noBalance) * noPrice;
-              const totalValue = yesValue + noValue;
-
-              const hasTokens = parseFloat(position.yesBalance) > 0 || parseFloat(position.noBalance) > 0;
-              const hasLp = parseFloat(position.lpShares) > 0;
-
+              const yesPrice = bpsToFloat(market.yesPrice);
+              const noPrice = bpsToFloat(market.noPrice);
+              const yesVal = (Number(BigInt(position.yesBalance)) / 1e6) * yesPrice;
+              const noVal = (Number(BigInt(position.noBalance)) / 1e6) * noPrice;
+              const hasTokens = BigInt(position.yesBalance) > 0n || BigInt(position.noBalance) > 0n;
+              const hasLp = BigInt(position.lpBalance) > 0n;
               if (!hasTokens && !hasLp) return null;
 
               return (
-                <div
-                  key={position.marketAddress}
-                  className="bg-[#0a0a0a] border border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: '2px 2px 0px rgba(212, 175, 55, 0.4)' }}
-                >
-                  <Link
-                    href={`/market/${position.marketAddress}`}
-                    className="text-white font-medium hover:text-[#E8C547] transition-colors block mb-3"
-                  >
-                    {position.question}
-                  </Link>
-
+                <div key={position.marketAddress} className="bg-[#0a0a0a] border border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: '2px 2px 0px rgba(212, 175, 55, 0.4)' }}>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-xs font-mono text-[#666666]">${position.tokenSymbol}</span>
+                    <Link href={`/market/${position.marketAddress}`} className="text-white font-medium hover:text-[#E8C547] transition-colors">
+                      {position.question}
+                    </Link>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    {parseFloat(position.yesBalance) > 0 && (
+                    {BigInt(position.yesBalance) > 0n && (
                       <div>
                         <div className="text-[#666666] text-xs mb-1">YES Balance</div>
-                        <div className="text-[#4ADE80] font-medium">{position.yesBalance}</div>
-                        <div className="text-[#666666] text-xs">${yesValue.toFixed(2)}</div>
+                        <div className="text-[#4ADE80] font-medium">{formatUSDC(BigInt(position.yesBalance))}</div>
+                        <div className="text-[#666666] text-xs">${yesVal.toFixed(2)}</div>
                       </div>
                     )}
-                    {parseFloat(position.noBalance) > 0 && (
+                    {BigInt(position.noBalance) > 0n && (
                       <div>
                         <div className="text-[#666666] text-xs mb-1">NO Balance</div>
-                        <div className="text-[#F87171] font-medium">{position.noBalance}</div>
-                        <div className="text-[#666666] text-xs">${noValue.toFixed(2)}</div>
+                        <div className="text-[#F87171] font-medium">{formatUSDC(BigInt(position.noBalance))}</div>
+                        <div className="text-[#666666] text-xs">${noVal.toFixed(2)}</div>
                       </div>
                     )}
                     {hasTokens && (
                       <div>
                         <div className="text-[#666666] text-xs mb-1">Total Value</div>
-                        <div className="text-[#E8C547] font-medium">${totalValue.toFixed(2)}</div>
+                        <div className="text-[#E8C547] font-medium">${(yesVal + noVal).toFixed(2)}</div>
                       </div>
                     )}
                     {hasLp && (
                       <div>
                         <div className="text-[#666666] text-xs mb-1">LP Shares</div>
-                        <div className="text-[#E8C547] font-medium">{position.lpShares}</div>
+                        <div className="text-[#E8C547] font-medium">{formatUSDC(BigInt(position.lpBalance))}</div>
                       </div>
                     )}
                   </div>

@@ -1,0 +1,373 @@
+project: Horus Frontend V2 Integration
+sprint: Hackathon Sprint — Wire to API + Contracts
+story_point_scale:
+  1: Trivial (< 30 min)
+  2: Small (~1h)
+  3: Medium (~2-3h)
+  5: Large (~half day)
+  8: XL (~full day)
+
+# ─────────────────────────────────────────────────
+# Context: All UI is built with mock data. This plan
+# wires everything to the real API + wallet TXs.
+# ─────────────────────────────────────────────────
+
+epics:
+  - id: epic-v2-1
+    name: Types & API Client Alignment
+    total_points: 5
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-1.1"
+        title: "Update types/market.ts — add all V2 fields, fix mismatches"
+        points: 2
+        status: backlog
+        notes: |
+          Add: tokenAddress, tokenSymbol, tokenName, tokenImg, poolAddress,
+               yesPrice (string BPS), noPrice (string BPS), snapshotTick,
+               currentTick, yesTokenAddress, noTokenAddress, txHash.
+          Drop: totalVolume (not tracked by API or contracts).
+          Fix ClaimableWinning: rename winningTokenBalance → claimableAmount.
+          Fix Position: drop currentValue (not in API), keep yesBalance/noBalance/lpBalance.
+          Fix MarketPrice: yesPrice/noPrice → string (BPS), drop yesReserve/noReserve (use Market).
+
+      - id: "v2-1.2"
+        title: "Update lib/api.ts — add missing endpoints, fix signatures"
+        points: 2
+        status: backlog
+        notes: |
+          Add: api.trade.buildClaim(address)
+          Add: api.trade.buildApprove(address, amount)
+          Add: api.tokens.trending()
+          Add: api.tokens.get(address)
+          Fix: api.admin.createMarket → body is { tokenAddress, initialLiquidity }
+          Fix: api.admin.resolveMarket → body is {} (no yesWins param)
+
+      - id: "v2-1.3"
+        title: "Add lib/utils.ts helper: bpsToFloat(bps: string) → number"
+        points: 1
+        status: backlog
+        notes: |
+          parseInt(bps) / 10000. Used everywhere prices are displayed.
+          Replaces calculateYesPrice/calculateNoPrice from mock-data.ts.
+
+  - id: epic-v2-2
+    name: Wire Market List Page (app/page.tsx)
+    total_points: 3
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-2.1"
+        title: "Replace mockMarkets with api.markets.list() — add useEffect + useState"
+        points: 2
+        status: backlog
+        notes: |
+          Fetch on mount, show skeleton while loading, error state on failure.
+          Remove import of mockMarkets.
+          Sort by 'newest' uses createdAt (works), 'volume' → drop or use yesReserve+noReserve,
+          'ending-soon' uses resolutionTime (works).
+
+      - id: "v2-2.2"
+        title: "Update MarketCard — use API prices, show token image + symbol"
+        points: 1
+        status: backlog
+        notes: |
+          Replace calculateYesPrice() with bpsToFloat(market.yesPrice).
+          Show market.tokenImg as avatar, market.tokenSymbol in card.
+          Drop totalVolume display or replace with liquidity (yesReserve + noReserve).
+
+  - id: epic-v2-3
+    name: Wire Market Detail Page (app/market/[address]/page.tsx)
+    total_points: 3
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-3.1"
+        title: "Replace mockMarkets.find() with api.markets.get(address)"
+        points: 2
+        status: backlog
+        notes: |
+          Fetch on mount with address param. Show loading state.
+          Use bpsToFloat() for yesPrice/noPrice instead of calculateYesPrice().
+          Drop totalVolume display.
+          Add oracle info to sidebar: snapshotTick, currentTick.
+
+      - id: "v2-3.2"
+        title: "Add auto-refresh — poll api.markets.get() every 10s while page is open"
+        points: 1
+        status: backlog
+        notes: |
+          useEffect with setInterval. Updates prices + reserves live.
+          Clear interval on unmount.
+
+  - id: epic-v2-4
+    name: Wire Trade Panel (buy/sell with wallet TX)
+    total_points: 5
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-4.1"
+        title: "Create shared useTx hook — approve → send TX → wait → toast"
+        points: 2
+        status: backlog
+        notes: |
+          Hook wraps: useSendTransaction from wagmi.
+          Pattern: 1) call API for TxData, 2) sendTransaction({to, data, value}),
+          3) show pending toast, 4) wait for receipt, 5) success/error toast.
+          Reused by ALL action panels.
+
+      - id: "v2-4.2"
+        title: "Wire TradePanel buy — approve USDC → buildBuy → send TX"
+        points: 2
+        status: backlog
+        notes: |
+          On Buy: 1) api.trade.buildApprove(market.address, amount) → send,
+          2) api.trade.buildBuy(market.address, buyYes, amount) → send.
+          On Sell: api.trade.buildSell(market.address, sellYes, amount) → send.
+          Sell doesn't need approve (contract burns from user).
+          Use parseUSDC(amount) to convert human input to raw bigint string.
+
+      - id: "v2-4.3"
+        title: "Fix estimate display — use bpsToFloat for price, show rough estimate"
+        points: 1
+        status: backlog
+        notes: |
+          estimateTokensOut: usdcIn / bpsToFloat(yesPrice or noPrice).
+          estimateUsdcOut: tokensIn * bpsToFloat(price).
+          These are rough client-side estimates — fine for hackathon.
+
+  - id: epic-v2-5
+    name: Wire Mint/Redeem & Claim Panels
+    total_points: 3
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-5.1"
+        title: "Wire MintRedeemPanel — approve → buildMint/buildRedeem → send TX"
+        points: 1
+        status: backlog
+        notes: |
+          Mint: approve USDC first, then buildMint.
+          Redeem: no approve needed (burns YES+NO from user), just buildRedeem.
+
+      - id: "v2-5.2"
+        title: "Wire ClaimPanel — buildClaim → send TX, remove amount input"
+        points: 2
+        status: backlog
+        notes: |
+          Contract claim() claims ALL winning tokens — no amount param.
+          Remove the claimAmount input field.
+          Show user's winning token balance (from market detail or user positions API).
+          Single "Claim All Winnings" button → api.trade.buildClaim(address) → send TX.
+
+  - id: epic-v2-6
+    name: Wire Liquidity Panel
+    total_points: 3
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-6.1"
+        title: "Wire LiquidityPanel — approve → buildAdd/buildRemove → send TX"
+        points: 2
+        status: backlog
+        notes: |
+          Add: approve USDC → api.liquidity.buildAdd(address, amount) → send.
+          Remove: no approve needed → api.liquidity.buildRemove(address, lpAmount) → send.
+          Replace mockUserLpShares with real data from user positions API.
+
+      - id: "v2-6.2"
+        title: "Replace mock LP data with real user LP balance"
+        points: 1
+        status: backlog
+        notes: |
+          Fetch api.user.getPositions(walletAddress), find this market's lpBalance.
+          Drop mockTotalLpShares — pool share % is nice-to-have, skip for now.
+          Or read totalLpSupply from chain if time permits.
+
+  - id: epic-v2-7
+    name: Wire Portfolio Page
+    total_points: 3
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-7.1"
+        title: "Replace mockPositions with api.user.getPositions(address)"
+        points: 2
+        status: backlog
+        notes: |
+          Fetch on mount when wallet connected.
+          Map API response to position cards.
+          Use bpsToFloat for value estimates (fetch market prices per position).
+
+      - id: "v2-7.2"
+        title: "Replace mockClaimable with api.user.getClaimable(address)"
+        points: 1
+        status: backlog
+        notes: |
+          Wire "Claim" button per market → api.trade.buildClaim → send TX.
+          Wire "Claim All" → sequential claims for each claimable market.
+
+  - id: epic-v2-8
+    name: Rewrite Admin Page for V2 Flow
+    total_points: 5
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-8.1"
+        title: "Replace Create Market form — token picker from Clanker trending"
+        points: 3
+        status: backlog
+        notes: |
+          Remove: question input, date picker, time picker.
+          Add: token search/picker using api.tokens.trending().
+          Show: token image, name, symbol, pool_address for each.
+          User selects token + enters initialLiquidity.
+          On submit: api.admin.createMarket({ tokenAddress, initialLiquidity }).
+          API derives question ("Will $SYM be UP in 10 min?"), resolutionTime, pool, token0IsQuote.
+          Show success with market address + TX hash.
+
+      - id: "v2-8.2"
+        title: "Replace Resolve YES/NO buttons with single 'Trigger Resolve' button"
+        points: 1
+        status: backlog
+        notes: |
+          V2 resolution is oracle-driven — admin just triggers, contract reads price.
+          Replace two buttons with one "Trigger Resolve" per expired market.
+          Call api.admin.resolveMarket(address) with empty body.
+          Show result (YES/NO wins) from response.
+
+      - id: "v2-8.3"
+        title: "Update auto-resolver status display with real data"
+        points: 1
+        status: backlog
+        notes: |
+          Show count of unresolved markets from api.markets.list() filtered by !resolved.
+          Show "Active" if API is reachable. Nice-to-have, low priority.
+
+  - id: epic-v2-9
+    name: Cleanup & Polish
+    total_points: 3
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "v2-9.1"
+        title: "Delete lib/mock-data.ts, remove all mock imports"
+        points: 1
+        status: backlog
+        notes: |
+          After all pages are wired, delete mock-data.ts.
+          Remove calculateYesPrice/calculateNoPrice imports from all files.
+          Grep for 'mock' to catch stragglers.
+
+      - id: "v2-9.2"
+        title: "Update lib/config.ts — add factory address after deployment"
+        points: 1
+        status: backlog
+        notes: |
+          Set contracts.factory to deployed address.
+          Consider moving to env var NEXT_PUBLIC_FACTORY_ADDRESS.
+
+      - id: "v2-9.3"
+        title: "Error boundary + loading states audit"
+        points: 1
+        status: backlog
+        notes: |
+          Ensure all API calls have try/catch with user-facing error messages.
+          Show skeleton/spinner during fetches.
+          Carried over from plan v1 epic-7 backlog.
+
+summary:
+  total_story_points: 33
+  completed_story_points: 0
+  in_progress_story_points: 0
+  backlog_story_points: 33
+  completion_percentage: 0%
+
+implementation_order:
+  # Sequential — each epic depends on the previous
+  - "epic-v2-1: Types + API client (MUST be first — TS will flag all broken usages)"
+  - "epic-v2-2: Market list page (first visible proof of life)"
+  - "epic-v2-3: Market detail page"
+  - "epic-v2-4: Trade panel (first real wallet TX)"
+  - "epic-v2-5: Mint/Redeem + Claim"
+  - "epic-v2-6: Liquidity panel"
+  - "epic-v2-7: Portfolio page"
+  - "epic-v2-8: Admin page rewrite"
+  - "epic-v2-9: Cleanup"
+
+critical_path:
+  - "v2-1.1 (types) → v2-1.2 (api.ts) → v2-2.1 (market list) → v2-3.1 (market detail) → v2-4.1 (useTx hook) → v2-4.2 (trade) → v2-8.1 (admin)"
+  - "v2-4.1 (useTx hook) unblocks ALL action panels (v2-4, v2-5, v2-6, v2-7)"
+
+blockers:
+  - "Contracts must be deployed to Base Sepolia → FACTORY_ADDRESS needed"
+  - "API must be running (npm run dev in api/) → ADMIN_PRIVATE_KEY needed"
+  - "Admin wallet must have USDC on Base Sepolia for market creation"
+  - "WalletConnect project ID needed in .env.local for RainbowKit"
+
+api_contract_mismatches_to_fix:
+  - field: totalVolume
+    location: types/market.ts, market-card.tsx, page.tsx (sort), market detail
+    issue: "Not tracked by API or contracts"
+    fix: "Drop from Market type. Replace volume sort with liquidity sort. Remove volume display or show yesReserve+noReserve."
+
+  - field: MarketPrice.yesPrice
+    location: types/market.ts
+    issue: "Frontend expects number (0-1 float), API returns string (BPS 0-10000)"
+    fix: "Change type to string. Add bpsToFloat() helper. Update all formatPercentage() calls."
+
+  - field: ClaimableWinning.winningTokenBalance
+    location: types/market.ts
+    issue: "API returns 'claimableAmount', frontend type says 'winningTokenBalance'"
+    fix: "Rename frontend field to claimableAmount."
+
+  - field: Position.currentValue
+    location: types/market.ts
+    issue: "API doesn't return currentValue"
+    fix: "Drop from type. Compute client-side if needed: balance * bpsToFloat(price)."
+
+  - field: admin.createMarket params
+    location: lib/api.ts, app/admin/page.tsx
+    issue: "Frontend sends {question, resolutionTime, initialLiquidity}. API expects {tokenAddress, initialLiquidity}."
+    fix: "Update api.ts signature. Rewrite admin form to token picker."
+
+  - field: admin.resolveMarket params
+    location: lib/api.ts, app/admin/page.tsx
+    issue: "Frontend sends {yesWins}. API ignores it — oracle decides."
+    fix: "Remove yesWins from body. Change UI from YES/NO buttons to single Trigger Resolve."
+
+  - field: claim() has no amount param
+    location: components/claim-panel.tsx
+    issue: "UI has amount input, but contract claim() claims ALL winning tokens"
+    fix: "Remove amount input. Show winning balance. Single 'Claim' button."
+
+files_to_modify:
+  - "types/market.ts — update all interfaces"
+  - "lib/api.ts — add endpoints, fix signatures"
+  - "lib/utils.ts — add bpsToFloat()"
+  - "lib/config.ts — add factory address"
+  - "app/page.tsx — wire to API"
+  - "app/market/[address]/page.tsx — wire to API"
+  - "app/portfolio/page.tsx — wire to API"
+  - "app/admin/page.tsx — full rewrite for V2 flow"
+  - "components/market-card.tsx — use API prices, show token info"
+  - "components/trade-panel.tsx — wire buy/sell TXs"
+  - "components/mint-redeem-panel.tsx — wire mint/redeem TXs"
+  - "components/claim-panel.tsx — wire claim TX, remove amount input"
+  - "components/liquidity-panel.tsx — wire add/remove TXs, real LP data"
+
+files_to_create:
+  - "hooks/useTx.ts — shared approve → send → wait → toast hook"
+
+files_to_delete:
+  - "lib/mock-data.ts — after all pages wired"
+
+files_unchanged:
+  - "app/layout.tsx — keep"
+  - "app/providers.tsx — keep"
+  - "app/globals.css — keep"
+  - "lib/wagmi.ts — keep"
+  - "components/header.tsx — keep"
+  - "components/custom-connect-button.tsx — keep"
+  - "components/market-card-skeleton.tsx — keep"

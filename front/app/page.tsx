@@ -5,14 +5,13 @@ import { Search } from 'lucide-react';
 import { MarketCard } from '@/components/market-card';
 import { MarketCardSkeleton } from '@/components/market-card-skeleton';
 import { mockMarkets } from '@/lib/mock-data';
-import type { Market } from '@/types/market';
 
 type FilterTab = 'all' | 'active' | 'resolved';
-type SortOption = 'newest' | 'volume' | 'ending-soon';
+type SortOption = 'newest' | 'liquidity' | 'ending-soon';
 
 export default function Home() {
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
-  const [sortBy, setSortBy] = useState<SortOption>('volume');
+  const [sortBy, setSortBy] = useState<SortOption>('ending-soon');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading] = useState(false);
 
@@ -35,8 +34,8 @@ export default function Home() {
       switch (sortBy) {
         case 'newest':
           return b.createdAt - a.createdAt;
-        case 'volume':
-          return parseInt(b.totalVolume) - parseInt(a.totalVolume);
+        case 'liquidity':
+          return (parseInt(b.yesReserve) + parseInt(b.noReserve)) - (parseInt(a.yesReserve) + parseInt(a.noReserve));
         case 'ending-soon':
           return a.resolutionTime - b.resolutionTime;
         default:
@@ -110,7 +109,7 @@ export default function Home() {
               className="px-4 py-2 bg-[#1a1a1a] border-2 border-[rgba(212,175,55,0.4)] text-white rounded-lg focus:border-[rgba(212,175,55,0.7)] focus:outline-none transition-colors font-medium"
               style={{ boxShadow: '3px 3px 0px rgba(212, 175, 55, 0.4)' }}
             >
-              <option value="volume">Highest Volume</option>
+              <option value="liquidity">Most Liquidity</option>
               <option value="newest">Newest</option>
               <option value="ending-soon">Ending Soon</option>
             </select>
