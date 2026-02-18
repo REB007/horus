@@ -3,10 +3,10 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./PredictionMarket.sol";
+import "./PredictionMarket_v2.sol";
 import "./interfaces/IUniswapV3Pool.sol";
 
-contract MarketFactory {
+contract MarketFactoryV2 {
     using SafeERC20 for IERC20;
 
     IERC20 public immutable usdc;
@@ -47,7 +47,7 @@ contract MarketFactory {
         require(_initialLiquidity > 0, "need initial liquidity");
         require(_pricePool != address(0), "need price pool");
 
-        PredictionMarket market = new PredictionMarket(
+        PredictionMarketV2 market = new PredictionMarketV2(
             address(usdc),
             admin,
             _question,

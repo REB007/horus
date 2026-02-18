@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../../src/v2/PredictionMarket.sol";
-import "../../src/v2/MarketFactory.sol";
+import "../../src/v2/PredictionMarket_v2.sol";
+import "../../src/v2/MarketFactory_v2.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @dev Mock USDC with 6 decimals
@@ -59,8 +59,8 @@ contract MockUniswapV3Pool {
 contract PredictionMarketV2Test is Test {
     MockUSDC usdc;
     MockUniswapV3Pool mockPool;
-    PredictionMarket market;
-    MarketFactory factory;
+    PredictionMarketV2 market;
+    MarketFactoryV2 factory;
 
     address admin = address(1);
     address alice = address(2);
@@ -80,7 +80,7 @@ contract PredictionMarketV2Test is Test {
         mockPool = new MockUniswapV3Pool(SNAPSHOT_TICK, weth, meme);
 
         vm.prank(admin);
-        factory = new MarketFactory(address(usdc));
+        factory = new MarketFactoryV2(address(usdc));
 
         usdc.mint(admin, 10_000 * USDC_UNIT);
         usdc.mint(alice, 10_000 * USDC_UNIT);
@@ -96,7 +96,7 @@ contract PredictionMarketV2Test is Test {
             address(mockPool),
             true // token0IsQuote: token0 is WETH
         );
-        market = PredictionMarket(marketAddr);
+        market = PredictionMarketV2(marketAddr);
         vm.stopPrank();
     }
 
@@ -193,7 +193,7 @@ contract PredictionMarketV2Test is Test {
     }
 
     function test_buyRevertNoLiquidity() public {
-        PredictionMarket emptyMarket = new PredictionMarket(
+        PredictionMarketV2 emptyMarket = new PredictionMarketV2(
             address(usdc), admin, "test", block.timestamp + 1 days,
             address(mockPool), true
         );
@@ -304,14 +304,14 @@ contract PredictionMarketV2Test is Test {
     function test_resolveTooEarly() public {
         // resolutionTime not reached yet
         vm.prank(admin);
-        vm.expectRevert("PredictionMarket: too early");
+        vm.expectRevert("PredictionMarketV2: too early");
         market.resolve();
     }
 
     function test_resolveOnlyAdmin() public {
         vm.warp(block.timestamp + RESOLUTION_DELAY);
         vm.prank(alice);
-        vm.expectRevert("PredictionMarket: not admin");
+        vm.expectRevert("PredictionMarketV2: not admin");
         market.resolve();
     }
 
@@ -322,7 +322,7 @@ contract PredictionMarketV2Test is Test {
 
         vm.startPrank(admin);
         market.resolve();
-        vm.expectRevert("PredictionMarket: already resolved");
+        vm.expectRevert("PredictionMarketV2: already resolved");
         market.resolve();
         vm.stopPrank();
     }
@@ -379,7 +379,7 @@ contract PredictionMarketV2Test is Test {
         );
         vm.stopPrank();
 
-        PredictionMarket invertedMarket = PredictionMarket(marketAddr);
+        PredictionMarketV2 invertedMarket = PredictionMarketV2(marketAddr);
 
         vm.warp(block.timestamp + RESOLUTION_DELAY);
         invertedPool.setTick(SNAPSHOT_TICK + 500); // tick UP = price UP when token0IsQuote=false
@@ -405,7 +405,7 @@ contract PredictionMarketV2Test is Test {
         );
         vm.stopPrank();
 
-        PredictionMarket invertedMarket = PredictionMarket(marketAddr);
+        PredictionMarketV2 invertedMarket = PredictionMarketV2(marketAddr);
 
         vm.warp(block.timestamp + RESOLUTION_DELAY);
         invertedPool.setTick(SNAPSHOT_TICK - 500); // tick DOWN = price DOWN when token0IsQuote=false
@@ -468,7 +468,7 @@ contract PredictionMarketV2Test is Test {
 
         vm.startPrank(alice);
         usdc.approve(address(market), 100 * USDC_UNIT);
-        vm.expectRevert("PredictionMarket: already resolved");
+        vm.expectRevert("PredictionMarketV2: already resolved");
         market.buy(true, 100 * USDC_UNIT);
         vm.stopPrank();
     }

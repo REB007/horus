@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "../OutcomeToken.sol";
 import "./interfaces/IUniswapV3Pool.sol";
 
-contract PredictionMarket {
+contract PredictionMarketV2 {
     using SafeERC20 for IERC20;
 
     // --- Tokens ---
@@ -50,12 +50,12 @@ contract PredictionMarket {
     event Redeemed(address indexed user, uint256 amount);
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "PredictionMarket: not admin");
+        require(msg.sender == admin, "PredictionMarketV2: not admin");
         _;
     }
 
     modifier notResolved() {
-        require(!resolved, "PredictionMarket: already resolved");
+        require(!resolved, "PredictionMarketV2: already resolved");
         _;
     }
 
@@ -260,7 +260,7 @@ contract PredictionMarket {
     ///         spot price and compares it to the snapshot taken at market creation.
     ///         Admin cannot choose the outcome — the price oracle decides.
     function resolve() external onlyAdmin notResolved {
-        require(block.timestamp >= resolutionTime, "PredictionMarket: too early");
+        require(block.timestamp >= resolutionTime, "PredictionMarketV2: too early");
 
         (, int24 currentTick,,,,,) = pricePool.slot0();
 
@@ -278,7 +278,7 @@ contract PredictionMarket {
     }
 
     function claim() external {
-        require(resolved, "PredictionMarket: not resolved");
+        require(resolved, "PredictionMarketV2: not resolved");
 
         uint256 amount;
         if (yesWins) {
