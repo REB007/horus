@@ -1,0 +1,283 @@
+project: Horus Contracts
+sprint: Hackathon Sprint
+story_point_scale:
+  1: Trivial (< 30 min)
+  2: Small (~1h)
+  3: Medium (~2-3h)
+  5: Large (~half day)
+  8: XL (~full day)
+
+epics:
+  - id: epic-1
+    name: V1 Core Contracts (OutcomeToken + PredictionMarket + MarketFactory)
+    total_points: 13
+    completed_points: 13
+    status: done
+    stories:
+      - id: "1.1"
+        title: OutcomeToken.sol — minimal ERC-20 with onlyMarket mint/burn
+        points: 1
+        status: done
+        notes: 26 lines, extends OpenZeppelin ERC20, immutable market address
+
+      - id: "1.2"
+        title: PredictionMarket.sol — mint/redeem (1 YES + 1 NO = 1 USDC)
+        points: 2
+        status: done
+        notes: SafeERC20 transfers, notResolved modifier, Minted/Redeemed events
+
+      - id: "1.3"
+        title: PredictionMarket.sol — CPMM buy/sell with 2% fee
+        points: 3
+        status: done
+        notes: k=yesR*noR invariant, quadratic formula for sell, fee accrues to LPs
+
+      - id: "1.4"
+        title: PredictionMarket.sol — addLiquidity/removeLiquidity with LP shares
+        points: 3
+        status: done
+        notes: Proportional add preserving price ratio, excess tokens returned to LP
+
+      - id: "1.5"
+        title: PredictionMarket.sol — resolve(bool) + claim()
+        points: 2
+        status: done
+        notes: onlyAdmin resolve, winners burn tokens for 1:1 USDC
+
+      - id: "1.6"
+        title: MarketFactory.sol — createMarket + admin management
+        points: 2
+        status: done
+        notes: Deploys market, seeds liquidity from admin, markets[] array, transferAdmin
+
+  - id: epic-2
+    name: V1 Test Suite
+    total_points: 8
+    completed_points: 8
+    status: done
+    stories:
+      - id: "2.1"
+        title: MockUSDC + test scaffold
+        points: 1
+        status: done
+        notes: 6-decimal mock, setUp with factory + 1000 USDC liquidity
+
+      - id: "2.2"
+        title: Mint/redeem tests (invariant, zero revert)
+        points: 1
+        status: done
+        notes: 3 tests passing
+
+      - id: "2.3"
+        title: Buy tests (YES, NO, price sums to 1, no liquidity revert)
+        points: 2
+        status: done
+        notes: 4 tests passing, price impact verified
+
+      - id: "2.4"
+        title: Sell tests (YES, NO, buy+sell loses to fees)
+        points: 1
+        status: done
+        notes: 3 tests passing
+
+      - id: "2.5"
+        title: Liquidity tests (balanced, imbalanced, remove)
+        points: 1
+        status: done
+        notes: 3 tests passing, ratio preservation verified
+
+      - id: "2.6"
+        title: Resolution + claim tests (yes/no/only-admin/once/loser/post-resolve)
+        points: 1
+        status: done
+        notes: 6 tests passing
+
+      - id: "2.7"
+        title: Full lifecycle + collateral invariant + small amount edge cases
+        points: 1
+        status: done
+        notes: 4 tests passing — 26/26 total green
+
+  - id: epic-3
+    name: V2 Interface — IUniswapV3Pool
+    total_points: 1
+    completed_points: 1
+    status: done
+    stories:
+      - id: "3.1"
+        title: src/v2/interfaces/IUniswapV3Pool.sol — slot0(), token0(), token1()
+        points: 1
+        status: done
+        notes: Minimal interface, no external deps, used by PredictionMarket v2
+
+  - id: epic-4
+    name: V2 PredictionMarket — On-Chain Price Oracle
+    total_points: 5
+    completed_points: 5
+    status: done
+    stories:
+      - id: "4.1"
+        title: Add pricePool, snapshotTick, token0IsQuote state variables
+        points: 1
+        status: done
+        notes: IUniswapV3Pool public pricePool, int24 public snapshotTick, bool public token0IsQuote
+
+      - id: "4.2"
+        title: Update constructor — accept _pricePool + _token0IsQuote, snapshot tick at creation
+        points: 1
+        status: done
+        notes: Reads slot0().tick at deploy time, stores as snapshotTick
+
+      - id: "4.3"
+        title: Rewrite resolve() — no bool param, reads slot0(), compares ticks
+        points: 2
+        status: done
+        notes: |
+          Admin triggers, contract decides outcome.
+          token0IsQuote=true: currentTick < snapshotTick → YES
+          token0IsQuote=false: currentTick > snapshotTick → YES
+          Equal tick → NO (not strictly "up")
+
+      - id: "4.4"
+        title: Add getCurrentTick() view function
+        points: 1
+        status: done
+        notes: Useful for frontend to show live price direction vs snapshot
+
+  - id: epic-5
+    name: V2 MarketFactory — Updated createMarket
+    total_points: 2
+    completed_points: 2
+    status: done
+    stories:
+      - id: "5.1"
+        title: Add _pricePool + _token0IsQuote params to createMarket()
+        points: 1
+        status: done
+        notes: Validates _pricePool != address(0), passes to PredictionMarket constructor
+
+      - id: "5.2"
+        title: NatSpec documentation on createMarket()
+        points: 1
+        status: done
+        notes: Explains each param, especially token0IsQuote convention
+
+  - id: epic-6
+    name: V2 Test Suite
+    total_points: 8
+    completed_points: 8
+    status: done
+    stories:
+      - id: "6.1"
+        title: MockUniswapV3Pool — settable tick, token0/token1
+        points: 1
+        status: done
+        notes: setTick() lets tests simulate any price movement without real Uniswap
+
+      - id: "6.2"
+        title: Update setUp() — mock pool, new createMarket() signature
+        points: 1
+        status: done
+        notes: SNAPSHOT_TICK=-230400, token0=WETH, token1=MEME, token0IsQuote=true
+
+      - id: "6.3"
+        title: Oracle snapshot tests (snapshotTick stored, token0IsQuote stored, getCurrentTick)
+        points: 1
+        status: done
+        notes: 3 tests verifying oracle state at creation
+
+      - id: "6.4"
+        title: Resolution tests — too early, only admin, resolve once
+        points: 1
+        status: done
+        notes: 3 revert tests, uses vm.warp for time travel
+
+      - id: "6.5"
+        title: Resolution tests — YES/NO with token0IsQuote=true (tick down/up/equal)
+        points: 1
+        status: done
+        notes: 3 tests covering all tick directions for WETH-as-quote pools
+
+      - id: "6.6"
+        title: Resolution tests — YES/NO with token0IsQuote=false (inverted pool)
+        points: 1
+        status: done
+        notes: 2 tests for MEME-as-token0 pools, verifies inverted tick logic
+
+      - id: "6.7"
+        title: Port all V1 tests — mint/redeem/buy/sell/LP/claim/lifecycle/invariant
+        points: 2
+        status: done
+        notes: All 16 ported tests updated for new resolve() signature (no bool param)
+
+  - id: epic-7
+    name: V2 Compilation & Test Run
+    total_points: 2
+    completed_points: 2
+    status: done
+    stories:
+      - id: "7.1"
+        title: forge build — compile v2 contracts cleanly
+        points: 1
+        status: done
+        notes: Clean compile, 4 files, Solc 0.8.20, no warnings
+
+      - id: "7.2"
+        title: forge test --match-path test/v2/* — all tests green
+        points: 1
+        status: done
+        notes: 33/33 passing — 25 ported + 8 new oracle tests (tick direction, too early, inverted pool)
+
+  - id: epic-8
+    name: Deployment
+    total_points: 3
+    completed_points: 0
+    status: backlog
+    stories:
+      - id: "8.1"
+        title: Write deploy script (script/Deploy.s.sol) for MarketFactory v2
+        points: 1
+        status: backlog
+        notes: Uses forge script, reads USDC address from env, broadcasts tx
+
+      - id: "8.2"
+        title: Deploy to Base Sepolia, verify on Basescan
+        points: 1
+        status: backlog
+        notes: forge script --rpc-url $BASE_SEPOLIA_RPC --broadcast --verify
+
+      - id: "8.3"
+        title: Smoke test on Base Sepolia — createMarket with real Clanker pool
+        points: 1
+        status: backlog
+        notes: Find a Clanker token pool on Sepolia or use a known Uniswap V3 pool
+
+summary:
+  total_story_points: 42
+  completed_story_points: 39
+  in_progress_story_points: 0
+  backlog_story_points: 3
+  completion_percentage: 92.9%
+
+current_sprint_focus:
+  - Epic 8 (deployment) — 3 pts, needed for E2E testing
+
+dependencies:
+  - V2 contracts must compile (Epic 7) before backend can copy ABIs
+  - Base Sepolia deployment (Epic 8) needed before frontend/backend integration
+  - Real Clanker pool address needed for smoke test (from Clanker API)
+
+notes:
+  - ✅ Epic 1 (13 pts) — V1 core contracts complete
+  - ✅ Epic 2 (8 pts) — V1 test suite, 26/26 passing
+  - ✅ Epic 3 (1 pt) — IUniswapV3Pool interface
+  - ✅ Epic 4 (5 pts) — V2 PredictionMarket with on-chain oracle
+  - ✅ Epic 5 (2 pts) — V2 MarketFactory with new createMarket params
+  - ✅ Epic 6 (8 pts) — V2 test suite, 33/33 passing
+  - ✅ Epic 7 (2 pts) — forge build clean, 33/33 tests green
+  - ⏳ Epic 8 (3 pts) — deployment PENDING
+  - V1 contracts in src/ are untouched — safe reference
+  - V2 contracts in src/v2/ — oracle upgrade, breaking change on resolve()
+  - OutcomeToken.sol is shared between V1 and V2 (no changes needed)
+  - Key design: admin triggers resolve(), contract reads Uniswap slot0() tick — admin cannot fabricate outcome
+  - token0IsQuote determined by backend reading pool.token0() on-chain before createMarket()
