@@ -1,9 +1,16 @@
 'use client';
 
+import { useState } from 'react';
+import { useSendTransaction, useAccount, useReadContract } from 'wagmi';
 import { Trophy } from 'lucide-react';
 import type { Market } from '@/types/market';
+import { api } from '@/lib/api';
 import { formatPercentage, formatUSDC } from '@/lib/utils';
 import toast from 'react-hot-toast';
+
+const ERC20_BALANCE_ABI = [
+  { name: 'balanceOf', type: 'function', inputs: [{ name: 'account', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+] as const;
 
 interface ClaimPanelProps {
   market: Market;
@@ -11,20 +18,39 @@ interface ClaimPanelProps {
   noPrice: number;
 }
 
-const MOCK_WINNING_BALANCE = BigInt('150000000');
-
 export function ClaimPanel({ market, yesPrice, noPrice }: ClaimPanelProps) {
+  const { address } = useAccount();
+  const [isPending, setIsPending] = useState(false);
+  const { sendTransactionAsync } = useSendTransaction();
+
+  const winningTokenAddress = market.yesWins ? market.yesTokenAddress : market.noTokenAddress;
   const winner = market.yesWins ? 'YES' : 'NO';
 
-  const handleClaim = () => {
-    if (MOCK_WINNING_BALANCE === 0n) {
+  const { data: winningBalance } = useReadContract({
+    address: winningTokenAddress as `0x${string}`,
+    abi: ERC20_BALANCE_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address && !!winningTokenAddress },
+  });
+
+  const balance = (winningBalance as bigint) ?? 0n;
+
+  const handleClaim = async () => {
+    if (balance === 0n) {
       toast.error('No winning tokens to claim');
       return;
     }
-    toast.success(
-      `Claiming ${formatUSDC(MOCK_WINNING_BALANCE)} USDC from $${market.tokenSymbol} — TX would be sent`,
-      { duration: 3000 }
-    );
+    setIsPending(true);
+    try {
+      const tx = await api.trade.buildClaim(market.address);
+      const hash = await sendTransactionAsync({ to: tx.to as `0x${string}`, data: tx.data as `0x${string}` });
+      toast.success(`Claimed ${formatUSDC(balance)} USDC! TX: ${hash.slice(0, 10)}…`);
+    } catch (e) {
+      toast.error(`Claim failed: ${e}`);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -48,21 +74,21 @@ export function ClaimPanel({ market, yesPrice, noPrice }: ClaimPanelProps) {
         <div className="bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
           <div className="flex justify-between items-center mb-1">
             <div className="text-sm text-[#999999]">Your {winner} tokens</div>
-            <div className="text-sm font-medium text-white">{formatUSDC(MOCK_WINNING_BALANCE)}</div>
+            <div className="text-sm font-medium text-white">{formatUSDC(balance)}</div>
           </div>
           <div className="flex justify-between items-center">
             <div className="text-sm text-[#999999]">You&apos;ll receive</div>
-            <div className="text-xl font-bold text-[#E8C547]">${formatUSDC(MOCK_WINNING_BALANCE)} USDC</div>
+            <div className="text-xl font-bold text-[#E8C547]">${formatUSDC(balance)} USDC</div>
           </div>
         </div>
 
         <button
           onClick={handleClaim}
-          disabled={MOCK_WINNING_BALANCE === 0n}
+          disabled={balance === 0n || isPending}
           className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ boxShadow: '4px 4px 0px #0a0a0a' }}
         >
-          Claim All Winnings
+          {isPending ? 'Confirming\u2026' : balance === 0n ? 'Nothing to Claim' : 'Claim All Winnings'}
         </button>
 
         <p className="text-xs text-[#666666] text-center">

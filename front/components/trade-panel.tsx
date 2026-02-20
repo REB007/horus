@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
+import { useSendTransaction } from 'wagmi';
 import { ArrowDownUp } from 'lucide-react';
 import type { Market } from '@/types/market';
-import { formatPercentage, parseUSDC, formatUSDC, bpsToFloat } from '@/lib/utils';
+import { api } from '@/lib/api';
+import { formatPercentage } from '@/lib/utils';
 import toast from 'react-hot-toast';
 
 interface TradePanelProps {
@@ -16,6 +18,9 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
   const [mode, setMode] = useState<'buy' | 'sell'>('buy');
   const [side, setSide] = useState<'yes' | 'no'>('yes');
   const [amount, setAmount] = useState('');
+  const [isPending, setIsPending] = useState(false);
+
+  const { sendTransactionAsync } = useSendTransaction();
 
   const estimateTokensOut = (usdcIn: string) => {
     if (!usdcIn || parseFloat(usdcIn) <= 0) return '0';
@@ -31,17 +36,32 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
     return usdc.toFixed(2);
   };
 
-  const handleTrade = () => {
+  const handleTrade = async () => {
     if (!amount || parseFloat(amount) <= 0) {
       toast.error('Please enter an amount');
       return;
     }
-    const verb = mode === 'buy' ? 'Buying' : 'Selling';
-    const label = mode === 'buy'
-      ? `${estimateTokensOut(amount)} ${side.toUpperCase()} tokens for $${amount} USDC`
-      : `${amount} ${side.toUpperCase()} tokens for ~$${estimateUsdcOut(amount)} USDC`;
-    toast.success(`${verb} $${market.tokenSymbol} ${side.toUpperCase()} — ${label} — TX would be sent`, { duration: 3000 });
-    setAmount('');
+    setIsPending(true);
+    try {
+      const amountBase = String(Math.round(parseFloat(amount) * 1_000_000));
+
+      if (mode === 'buy') {
+        const approveTx = await api.trade.buildApprove(market.address, amountBase);
+        await sendTransactionAsync({ to: approveTx.to as `0x${string}`, data: approveTx.data as `0x${string}` });
+        const buyTx = await api.trade.buildBuy(market.address, side === 'yes', amountBase, '');
+        const hash = await sendTransactionAsync({ to: buyTx.to as `0x${string}`, data: buyTx.data as `0x${string}` });
+        toast.success(`Bought ${side.toUpperCase()} tokens! TX: ${hash.slice(0, 10)}…`);
+      } else {
+        const sellTx = await api.trade.buildSell(market.address, side === 'yes', amountBase, '');
+        const hash = await sendTransactionAsync({ to: sellTx.to as `0x${string}`, data: sellTx.data as `0x${string}` });
+        toast.success(`Sold ${side.toUpperCase()} tokens! TX: ${hash.slice(0, 10)}…`);
+      }
+      setAmount('');
+    } catch (e) {
+      toast.error(`Transaction failed: ${e}`);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -125,10 +145,11 @@ export function TradePanel({ market, yesPrice, noPrice }: TradePanelProps) {
 
         <button
           onClick={handleTrade}
-          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active"
+          disabled={isPending}
+          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ boxShadow: '3px 3px 0px #0a0a0a' }}
         >
-          {mode === 'buy' ? 'Buy' : 'Sell'} {side.toUpperCase()}
+          {isPending ? 'Confirming…' : `${mode === 'buy' ? 'Buy' : 'Sell'} ${side.toUpperCase()}`}
         </button>
       </div>
     </div>

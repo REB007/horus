@@ -47,6 +47,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ amount, sender }),
       }),
+    buildClaim: (address: string) =>
+      fetchAPI<TxData>(`/api/markets/${address}/claim`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }),
+    buildApprove: (spender: string, amount: string) =>
+      fetchAPI<TxData>(`/api/markets/${spender}/approve`, {
+        method: 'POST',
+        body: JSON.stringify({ amount }),
+      }),
   },
 
   liquidity: {
@@ -67,16 +77,27 @@ export const api = {
     getClaimable: (address: string) => fetchAPI<ClaimableWinning[]>(`/api/users/${address}/claimable`),
   },
 
+  tokens: {
+    trending: () => fetchAPI<import('@/types/market').ClankerToken[]>('/api/tokens/trending'),
+  },
+
   admin: {
-    createMarket: (question: string, resolutionTime: number, initialLiquidity: string) =>
-      fetchAPI<{ marketAddress: string }>('/api/admin/markets', {
+    createMarket: (params: {
+      tokenAddress: string;
+      poolAddress: string;
+      token0IsQuote: boolean;
+      tokenSymbol?: string;
+      tokenName?: string;
+      initialLiquidity: number;
+    }) =>
+      fetchAPI<{ marketAddress: string; question: string; resolutionTime: number; txHash: string }>('/api/admin/markets', {
         method: 'POST',
-        body: JSON.stringify({ question, resolutionTime, initialLiquidity }),
+        body: JSON.stringify(params),
       }),
-    resolveMarket: (address: string, yesWins: boolean) =>
-      fetchAPI<void>(`/api/admin/markets/${address}/resolve`, {
+    resolveMarket: (address: string) =>
+      fetchAPI<{ yesWins: boolean; txHash: string }>(`/api/admin/markets/${address}/resolve`, {
         method: 'POST',
-        body: JSON.stringify({ yesWins }),
+        body: JSON.stringify({}),
       }),
   },
 };

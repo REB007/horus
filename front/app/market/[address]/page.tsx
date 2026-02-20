@@ -1,10 +1,10 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Clock, Droplets, Activity } from 'lucide-react';
-import { mockMarkets } from '@/lib/mock-data';
+import { api } from '@/lib/api';
 import { formatUSDC, formatPercentage, bpsToFloat } from '@/lib/utils';
 import { TradePanel } from '@/components/trade-panel';
 import { MintRedeemPanel } from '@/components/mint-redeem-panel';
@@ -32,15 +32,48 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
   const { address } = use(params);
   const router = useRouter();
 
-  const market: Market | undefined = mockMarkets.find((m) => m.address === address);
+  const [market, setMarket] = useState<Market | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadMarket = useCallback(async (isFirst: boolean) => {
+    try {
+      const data = await api.markets.get(address);
+      setMarket(data);
+      setError(null);
+    } catch (e) {
+      if (isFirst) setError(String(e));
+    } finally {
+      if (isFirst) setIsLoading(false);
+    }
+  }, [address]);
+
+  useEffect(() => {
+    loadMarket(true);
+    const interval = setInterval(() => loadMarket(false), 10_000);
+    return () => clearInterval(interval);
+  }, [loadMarket]);
 
   const secsLeft = useCountdown(market?.resolutionTime ?? 0);
 
-  if (!market) {
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-32 bg-[#1a1a1a] rounded" />
+          <div className="h-64 bg-[#1a1a1a] rounded-xl" />
+          <div className="h-48 bg-[#1a1a1a] rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !market) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="text-center py-20">
           <h1 className="text-2xl font-bold text-gray-100 mb-4">Market not found</h1>
+          {error && <p className="text-[#F87171] text-sm mb-4">{error}</p>}
           <button onClick={() => router.push('/')} className="text-yellow-500 hover:text-yellow-400">
             ← Back to markets
           </button>
@@ -49,9 +82,9 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
     );
   }
 
-  const yesPrice = bpsToFloat(market.yesPrice);
-  const noPrice = bpsToFloat(market.noPrice);
-  const liquidity = BigInt(market.yesReserve) + BigInt(market.noReserve);
+  const yesPrice = bpsToFloat(market.yesPrice ?? 5000);
+  const noPrice = bpsToFloat(market.noPrice ?? 5000);
+  const liquidity = BigInt(market.yesReserve ?? '0') + BigInt(market.noReserve ?? '0');
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -145,11 +178,11 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
               </div>
               <div>
                 <div className="text-[#999999] mb-1">YES Reserve</div>
-                <div className="text-[#4ADE80] font-medium">{formatUSDC(BigInt(market.yesReserve))} tokens</div>
+                <div className="text-[#4ADE80] font-medium">{formatUSDC(BigInt(market.yesReserve ?? '0'))} tokens</div>
               </div>
               <div>
                 <div className="text-[#999999] mb-1">NO Reserve</div>
-                <div className="text-[#F87171] font-medium">{formatUSDC(BigInt(market.noReserve))} tokens</div>
+                <div className="text-[#F87171] font-medium">{formatUSDC(BigInt(market.noReserve ?? '0'))} tokens</div>
               </div>
               <div className="pt-3 border-t border-[rgba(212,175,55,0.2)]">
                 <div className="text-[#999999] mb-1">Oracle (Uniswap V3)</div>

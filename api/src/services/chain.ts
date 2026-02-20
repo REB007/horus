@@ -1,19 +1,19 @@
 import { createPublicClient, createWalletClient, http, getContract } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { baseSepolia } from 'viem/chains';
+import { sepolia } from 'viem/chains';
 import { config } from '../config';
 import PredictionMarketV2Abi from '../abi/PredictionMarketV2.json';
 import MarketFactoryV2Abi from '../abi/MarketFactoryV2.json';
 import OutcomeTokenAbi from '../abi/OutcomeToken.json';
 
 export const publicClient = createPublicClient({
-  chain: baseSepolia,
+  chain: sepolia,
   transport: http(config.rpcUrl),
 });
 
 export const walletClient = createWalletClient({
   account: privateKeyToAccount(config.adminPrivateKey),
-  chain: baseSepolia,
+  chain: sepolia,
   transport: http(config.rpcUrl),
 });
 

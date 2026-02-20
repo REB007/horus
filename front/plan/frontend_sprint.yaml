@@ -1,0 +1,100 @@
+epics:
+  - id: E1
+    title: Config & Chain Switch
+    status: pending
+    stories:
+      - id: E1-1
+        file: front/.env.local
+        change: Set NEXT_PUBLIC_CHAIN_ID=11155111
+        status: pending
+      - id: E1-2
+        file: lib/config.ts
+        change: Update chainId default, USDC address, add factory address constant
+        status: pending
+      - id: E1-3
+        file: lib/wagmi.ts
+        change: Replace baseSepolia with sepolia
+        status: pending
+
+  - id: E2
+    title: Replace Mock Data with Real API
+    status: pending
+    stories:
+      - id: E2-1
+        file: app/page.tsx
+        change: useEffect + api.markets.list(), loading state, error state
+        status: pending
+      - id: E2-2
+        file: app/market/[address]/page.tsx
+        change: api.markets.get(address), auto-refresh every 10s
+        status: pending
+      - id: E2-3
+        file: app/portfolio/page.tsx
+        change: api.user.getPositions + getClaimable using connected wallet address
+        status: pending
+      - id: E2-4
+        file: app/admin/page.tsx
+        change: api.markets.list() for resolve panel, api.tokens.trending() for token picker
+        status: pending
+
+  - id: E3
+    title: Wire Real Wallet Transactions
+    status: pending
+    stories:
+      - id: E3-1
+        file: components/trade-panel.tsx
+        change: >
+          On buy: approve USDC then call api.trade.buildBuy → useSendTransaction.
+          On sell: api.trade.buildSell → useSendTransaction.
+        status: pending
+      - id: E3-2
+        file: components/mint-redeem-panel.tsx
+        change: >
+          Mint: approve USDC → api.trade.buildMint → send.
+          Redeem: api.trade.buildRedeem → send.
+        status: pending
+      - id: E3-3
+        file: components/claim-panel.tsx
+        change: api.trade.buildClaim → useSendTransaction → toast success
+        status: pending
+      - id: E3-4
+        file: components/liquidity-panel.tsx
+        change: >
+          Add: approve USDC → api.liquidity.buildAdd → send.
+          Remove: api.liquidity.buildRemove → send.
+        status: pending
+      - id: E3-5
+        file: app/admin/page.tsx
+        change: >
+          createMarket: approve USDC → POST /api/admin/markets → send tx.
+          resolve: POST /api/admin/markets/:address/resolve → send tx.
+        status: pending
+
+  - id: E4
+    title: Polish & Live Data
+    status: pending
+    stories:
+      - id: E4-1
+        file: app/market/[address]/page.tsx
+        change: Loading skeleton while fetching, error state if 404
+        status: pending
+      - id: E4-2
+        file: lib/api.ts
+        change: Fix admin.createMarket to accept tokenAddress + poolAddress + token0IsQuote
+        status: pending
+
+tx_pattern: |
+  All transaction panels follow this pattern:
+  1. Call API endpoint to get { to, data } calldata
+  2. If USDC spend needed: first send approve tx (to=USDC, data=approve calldata)
+  3. Wait for approve receipt
+  4. Send main tx with useSendTransaction({ to, data })
+  5. Wait for receipt with useWaitForTransactionReceipt
+  6. Invalidate react-query cache for market data
+  7. Toast success/error
+
+notes:
+  - All panels already import wagmi hooks — just need to use them
+  - useSendTransaction is preferred over useWriteContract since API returns raw calldata
+  - USDC on Sepolia has 6 decimals — amounts in API are already in base units
+  - No need for a custom hook file — inline wagmi hooks per panel is fine for hackathon

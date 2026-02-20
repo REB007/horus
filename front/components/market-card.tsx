@@ -28,11 +28,11 @@ function formatCountdown(secs: number): string {
 }
 
 export function MarketCard({ market }: MarketCardProps) {
-  const yesPrice = bpsToFloat(market.yesPrice);
-  const noPrice = bpsToFloat(market.noPrice);
+  const yesPrice = bpsToFloat(market.yesPrice ?? 5000);
+  const noPrice = bpsToFloat(market.noPrice ?? 5000);
   const isResolved = market.resolved;
   const secsLeft = useCountdown(market.resolutionTime);
-  const liquidity = BigInt(market.yesReserve) + BigInt(market.noReserve);
+  const liquidity = BigInt(market.yesReserve ?? '0') + BigInt(market.noReserve ?? '0');
 
   return (
     <Link href={`/market/${market.address}`}>

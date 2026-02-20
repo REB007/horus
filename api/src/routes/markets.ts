@@ -44,6 +44,12 @@ router.get('/', async (_req: Request, res: Response) => {
             resolutionTime: row.resolution_time,
             resolved: row.resolved === 1,
             yesWins: row.yes_wins === 1,
+            yesReserve: '0',
+            noReserve: '0',
+            yesPrice: '5000',
+            noPrice: '5000',
+            snapshotTick: 0,
+            currentTick: 0,
             createdAt: row.created_at,
             txHash: row.tx_hash,
           };

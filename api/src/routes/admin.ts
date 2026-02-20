@@ -11,35 +11,56 @@ const router = Router();
 
 router.post('/markets', async (req: Request, res: Response) => {
   try {
-    const { tokenAddress, initialLiquidity } = req.body;
+    const { tokenAddress, initialLiquidity, poolAddress, token0IsQuote: manualToken0IsQuote, tokenSymbol, tokenName } = req.body;
     if (!tokenAddress || !initialLiquidity) {
       return res.status(400).json({ error: 'tokenAddress and initialLiquidity required' });
     }
 
-    // 1. Fetch token info from Clanker
-    const token = await getTokenByAddress(tokenAddress);
-    if (!token) return res.status(404).json({ error: 'Token not found on Clanker' });
-    if (!token.pool_address) return res.status(400).json({ error: 'Token has no Uniswap pool' });
+    let resolvedPoolAddress: string;
+    let resolvedToken0IsQuote: boolean;
+    let resolvedSymbol: string;
+    let resolvedName: string;
+    let resolvedImg: string | null = null;
 
-    // 2. Determine token0IsQuote by reading pool.token0() on-chain
-    const token0 = await getPoolToken0(token.pool_address as `0x${string}`);
-    const token0IsQuote = token0.toLowerCase() !== tokenAddress.toLowerCase();
+    if (poolAddress) {
+      // Manual override — bypass Clanker (used for mock tokens / testing)
+      if (typeof manualToken0IsQuote !== 'boolean') {
+        return res.status(400).json({ error: 'token0IsQuote (boolean) required when poolAddress is provided' });
+      }
+      resolvedPoolAddress = poolAddress;
+      resolvedToken0IsQuote = manualToken0IsQuote;
+      resolvedSymbol = tokenSymbol || 'MOCK';
+      resolvedName = tokenName || 'Mock Token';
+    } else {
+      // Fetch token info from Clanker
+      const token = await getTokenByAddress(tokenAddress);
+      if (!token) return res.status(404).json({ error: 'Token not found on Clanker' });
+      if (!token.pool_address) return res.status(400).json({ error: 'Token has no Uniswap pool' });
 
-    // 3. Build market params
-    const question = `Will $${token.symbol} be UP in 10 min?`;
+      // Determine token0IsQuote by reading pool.token0() on-chain
+      const token0 = await getPoolToken0(token.pool_address as `0x${string}`);
+      resolvedPoolAddress = token.pool_address;
+      resolvedToken0IsQuote = token0.toLowerCase() !== tokenAddress.toLowerCase();
+      resolvedSymbol = token.symbol;
+      resolvedName = token.name;
+      resolvedImg = token.img_url;
+    }
+
+    // Build market params
+    const question = `Will $${resolvedSymbol} be UP in 10 min?`;
     const resolutionTime = BigInt(Math.floor(Date.now() / 1000) + 600);
     const liquidityBigInt = BigInt(initialLiquidity);
 
-    // 4. Sign + send createMarket tx
+    // Sign + send createMarket tx
     const hash = await walletClient.writeContract({
       account: adminAccount,
       address: config.factoryAddress,
       abi: MarketFactoryV2Abi,
       functionName: 'createMarket',
-      args: [question, resolutionTime, liquidityBigInt, token.pool_address as `0x${string}`, token0IsQuote],
+      args: [question, resolutionTime, liquidityBigInt, resolvedPoolAddress as `0x${string}`, resolvedToken0IsQuote],
     });
 
-    // 5. Wait for receipt and extract market address from MarketCreated event
+    // Wait for receipt and extract market address from MarketCreated event
     const receipt = await publicClient.waitForTransactionReceipt({ hash });
     const logs = parseEventLogs({
       abi: MarketFactoryV2Abi,
@@ -50,14 +71,14 @@ router.post('/markets', async (req: Request, res: Response) => {
     if (!logs.length) return res.status(500).json({ error: 'MarketCreated event not found in receipt' });
     const marketAddress = (logs[0] as unknown as { args: { market: string } }).args.market;
 
-    // 6. Insert into DB
+    // Insert into DB
     insertMarket({
       address: marketAddress,
       token_address: tokenAddress,
-      token_symbol: token.symbol,
-      token_name: token.name,
-      token_img: token.img_url,
-      pool_address: token.pool_address,
+      token_symbol: resolvedSymbol,
+      token_name: resolvedName,
+      token_img: resolvedImg,
+      pool_address: resolvedPoolAddress,
       question,
       resolution_time: Number(resolutionTime),
       created_at: Math.floor(Date.now() / 1000),

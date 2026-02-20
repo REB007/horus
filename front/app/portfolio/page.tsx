@@ -1,23 +1,62 @@
 'use client';
 
-import { useAccount } from 'wagmi';
+import { useAccount, useSendTransaction } from 'wagmi';
 import { Wallet, TrendingUp, Trophy } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { mockPositions, mockClaimable, mockMarkets } from '@/lib/mock-data';
-import { formatUSDC, formatPercentage, bpsToFloat } from '@/lib/utils';
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
+import type { Position, ClaimableWinning } from '@/types/market';
+import { formatUSDC } from '@/lib/utils';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 
 export default function PortfolioPage() {
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
+  const [positions, setPositions] = useState<Position[]>([]);
+  const [claimable, setClaimable] = useState<ClaimableWinning[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleClaim = (symbol: string, amount: string) => {
-    toast.success(`Claiming $${formatUSDC(BigInt(amount))} USDC from $${symbol} market — TX would be sent`, { duration: 3000 });
+  const { sendTransactionAsync } = useSendTransaction();
+
+  useEffect(() => {
+    if (!address) return;
+    let cancelled = false;
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const [pos, clm] = await Promise.all([
+          api.user.getPositions(address),
+          api.user.getClaimable(address),
+        ]);
+        if (!cancelled) { setPositions(pos); setClaimable(clm); }
+      } catch (e) {
+        if (!cancelled) toast.error(`Failed to load portfolio: ${e}`);
+      } finally {
+        if (!cancelled) setIsLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, [address]);
+
+  const handleClaim = async (marketAddress: string, symbol: string) => {
+    try {
+      const tx = await api.trade.buildClaim(marketAddress);
+      const hash = await sendTransactionAsync({ to: tx.to as `0x${string}`, data: tx.data as `0x${string}` });
+      toast.success(`Claimed $${symbol} winnings! TX: ${hash.slice(0, 10)}…`);
+      if (address) {
+        const [pos, clm] = await Promise.all([api.user.getPositions(address), api.user.getClaimable(address)]);
+        setPositions(pos); setClaimable(clm);
+      }
+    } catch (e) {
+      toast.error(`Claim failed: ${e}`);
+    }
   };
 
-  const handleClaimAll = () => {
-    const total = mockClaimable.reduce((sum, c) => sum + BigInt(c.claimableAmount), 0n);
-    toast.success(`Claiming $${formatUSDC(total)} USDC from ${mockClaimable.length} markets — TX would be sent`, { duration: 3000 });
+  const handleClaimAll = async () => {
+    for (const c of claimable) {
+      await handleClaim(c.marketAddress, c.tokenSymbol);
+    }
   };
 
   if (!isConnected) {
@@ -33,7 +72,7 @@ export default function PortfolioPage() {
     );
   }
 
-  const hasPositions = mockPositions.some(
+  const hasPositions = positions.some(
     (p) => BigInt(p.yesBalance) > 0n || BigInt(p.noBalance) > 0n || BigInt(p.lpBalance) > 0n
   );
 
@@ -44,7 +83,11 @@ export default function PortfolioPage() {
         <p className="text-[#999999]">Your positions and claimable winnings</p>
       </div>
 
-      {mockClaimable.length > 0 && (
+      {isLoading && (
+        <div className="text-center py-8 text-[#666666] text-sm">Loading portfolio…</div>
+      )}
+
+      {claimable.length > 0 && (
         <div className="bg-[#1a1a1a] border-2 border-[rgba(212,175,55,0.5)] rounded-xl p-6 mb-6" style={{ boxShadow: '6px 6px 0px rgba(212, 175, 55, 0.7)' }}>
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
@@ -60,7 +103,7 @@ export default function PortfolioPage() {
             </button>
           </div>
           <div className="space-y-4">
-            {mockClaimable.map((claim) => (
+            {claimable.map((claim) => (
               <div key={claim.marketAddress} className="bg-[#0a0a0a] border border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: '2px 2px 0px rgba(212, 175, 55, 0.4)' }}>
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
@@ -77,7 +120,7 @@ export default function PortfolioPage() {
                     </div>
                   </div>
                   <button
-                    onClick={() => handleClaim(claim.tokenSymbol, claim.claimableAmount)}
+                    onClick={() => handleClaim(claim.marketAddress, claim.tokenSymbol)}
                     className="px-4 py-2 bg-transparent text-[#E8C547] font-medium rounded-lg transition-all border-2 border-[rgba(212,175,55,0.5)] neo-hover neo-active"
                     style={{ boxShadow: '2px 2px 0px rgba(212, 175, 55, 0.4)' }}
                   >
@@ -103,14 +146,7 @@ export default function PortfolioPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {mockPositions.map((position) => {
-              const market = mockMarkets.find((m) => m.address === position.marketAddress);
-              if (!market) return null;
-
-              const yesPrice = bpsToFloat(market.yesPrice);
-              const noPrice = bpsToFloat(market.noPrice);
-              const yesVal = (Number(BigInt(position.yesBalance)) / 1e6) * yesPrice;
-              const noVal = (Number(BigInt(position.noBalance)) / 1e6) * noPrice;
+            {positions.map((position) => {
               const hasTokens = BigInt(position.yesBalance) > 0n || BigInt(position.noBalance) > 0n;
               const hasLp = BigInt(position.lpBalance) > 0n;
               if (!hasTokens && !hasLp) return null;
@@ -128,20 +164,12 @@ export default function PortfolioPage() {
                       <div>
                         <div className="text-[#666666] text-xs mb-1">YES Balance</div>
                         <div className="text-[#4ADE80] font-medium">{formatUSDC(BigInt(position.yesBalance))}</div>
-                        <div className="text-[#666666] text-xs">${yesVal.toFixed(2)}</div>
                       </div>
                     )}
                     {BigInt(position.noBalance) > 0n && (
                       <div>
                         <div className="text-[#666666] text-xs mb-1">NO Balance</div>
                         <div className="text-[#F87171] font-medium">{formatUSDC(BigInt(position.noBalance))}</div>
-                        <div className="text-[#666666] text-xs">${noVal.toFixed(2)}</div>
-                      </div>
-                    )}
-                    {hasTokens && (
-                      <div>
-                        <div className="text-[#666666] text-xs mb-1">Total Value</div>
-                        <div className="text-[#E8C547] font-medium">${(yesVal + noVal).toFixed(2)}</div>
                       </div>
                     )}
                     {hasLp && (

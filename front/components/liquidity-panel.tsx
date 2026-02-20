@@ -1,10 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { useSendTransaction, useAccount, useReadContract } from 'wagmi';
 import { Droplets } from 'lucide-react';
 import type { Market } from '@/types/market';
+import { api } from '@/lib/api';
 import { formatUSDC } from '@/lib/utils';
 import toast from 'react-hot-toast';
+
+const MARKET_ABI = [
+  { name: 'lpBalances', type: 'function', inputs: [{ name: '', type: 'address' }], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+  { name: 'totalLpSupply', type: 'function', inputs: [], outputs: [{ name: '', type: 'uint256' }], stateMutability: 'view' },
+] as const;
 
 interface LiquidityPanelProps {
   market: Market;
@@ -13,36 +20,68 @@ interface LiquidityPanelProps {
 export function LiquidityPanel({ market }: LiquidityPanelProps) {
   const [mode, setMode] = useState<'add' | 'remove'>('add');
   const [amount, setAmount] = useState('');
-  
-  const mockUserLpShares = '1234';
-  const mockTotalLpShares = '50000';
-  const poolPercentage = ((parseFloat(mockUserLpShares) / parseFloat(mockTotalLpShares)) * 100).toFixed(2);
-  
-  const totalLiquidity = BigInt(market.yesReserve) + BigInt(market.noReserve);
+  const [isPending, setIsPending] = useState(false);
+
+  const { address } = useAccount();
+  const { sendTransactionAsync } = useSendTransaction();
+
+  const { data: userLpRaw } = useReadContract({
+    address: market.address as `0x${string}`,
+    abi: MARKET_ABI,
+    functionName: 'lpBalances',
+    args: address ? [address] : undefined,
+    query: { enabled: !!address },
+  });
+  const { data: totalLpRaw } = useReadContract({
+    address: market.address as `0x${string}`,
+    abi: MARKET_ABI,
+    functionName: 'totalLpSupply',
+  });
+
+  const userLp = (userLpRaw as bigint) ?? 0n;
+  const totalLp = (totalLpRaw as bigint) ?? 0n;
+  const poolPercentage = totalLp > 0n ? ((Number(userLp) / Number(totalLp)) * 100).toFixed(2) : '0.00';
+  const totalLiquidity = BigInt(market.yesReserve ?? '0') + BigInt(market.noReserve ?? '0');
 
   const estimateLpShares = (usdcIn: string) => {
     if (!usdcIn || parseFloat(usdcIn) <= 0) return '0';
-    const shares = (parseFloat(usdcIn) / Number(formatUSDC(totalLiquidity))) * parseFloat(mockTotalLpShares);
-    return shares.toFixed(2);
+    if (totalLp === 0n || totalLiquidity === 0n) return usdcIn;
+    const shares = (parseFloat(usdcIn) * 1e6 * Number(totalLp)) / Number(totalLiquidity);
+    return (shares / 1e6).toFixed(2);
   };
 
   const estimateUsdcOut = (lpSharesIn: string) => {
     if (!lpSharesIn || parseFloat(lpSharesIn) <= 0) return '0';
-    const usdcValue = (parseFloat(lpSharesIn) / parseFloat(mockTotalLpShares)) * Number(formatUSDC(totalLiquidity));
-    return usdcValue.toFixed(2);
+    if (totalLp === 0n) return '0';
+    const usdcValue = (parseFloat(lpSharesIn) * 1e6 * Number(totalLiquidity)) / Number(totalLp);
+    return (usdcValue / 1e6).toFixed(2);
   };
 
-  const handleAction = () => {
+  const handleAction = async () => {
     if (!amount || parseFloat(amount) <= 0) {
       toast.error('Please enter an amount');
       return;
     }
-
-    toast.success(
-      `${mode === 'add' ? 'Adding' : 'Removing'} liquidity - Transaction would be sent to wallet`,
-      { duration: 3000 }
-    );
-    setAmount('');
+    setIsPending(true);
+    try {
+      const amountBase = String(Math.round(parseFloat(amount) * 1_000_000));
+      if (mode === 'add') {
+        const approveTx = await api.trade.buildApprove(market.address, amountBase);
+        await sendTransactionAsync({ to: approveTx.to as `0x${string}`, data: approveTx.data as `0x${string}` });
+        const addTx = await api.liquidity.buildAdd(market.address, amountBase, '');
+        const hash = await sendTransactionAsync({ to: addTx.to as `0x${string}`, data: addTx.data as `0x${string}` });
+        toast.success(`Liquidity added! TX: ${hash.slice(0, 10)}…`);
+      } else {
+        const removeTx = await api.liquidity.buildRemove(market.address, amountBase, '');
+        const hash = await sendTransactionAsync({ to: removeTx.to as `0x${string}`, data: removeTx.data as `0x${string}` });
+        toast.success(`Liquidity removed! TX: ${hash.slice(0, 10)}…`);
+      }
+      setAmount('');
+    } catch (e) {
+      toast.error(`Transaction failed: ${e}`);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -52,13 +91,13 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
         <h2 className="text-lg font-semibold text-white">Liquidity Provider</h2>
       </div>
 
-      {parseFloat(mockUserLpShares) > 0 && (
+      {userLp > 0n && (
         <div className="bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] rounded-lg p-4 mb-6" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
           <div className="text-sm text-[#999999] mb-3">Your LP Position</div>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-xs text-[#666666] mb-1">LP Shares</div>
-              <div className="text-lg font-semibold text-[#E8C547]">{mockUserLpShares}</div>
+              <div className="text-lg font-semibold text-[#E8C547]">{formatUSDC(userLp)}</div>
             </div>
             <div>
               <div className="text-xs text-[#666666] mb-1">Pool Share</div>
@@ -68,7 +107,7 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
           <div className="mt-3 pt-3 border-t border-[rgba(212,175,55,0.2)]">
             <div className="text-xs text-[#666666] mb-1">Estimated Value</div>
             <div className="text-lg font-semibold text-white">
-              ${estimateUsdcOut(mockUserLpShares)} USDC
+              ${estimateUsdcOut(formatUSDC(userLp))} USDC
             </div>
           </div>
         </div>
@@ -124,7 +163,7 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
                 {estimateLpShares(amount)} LP shares
               </div>
               <div className="text-xs text-[#666666]">
-                Pool share: {((parseFloat(estimateLpShares(amount)) / parseFloat(mockTotalLpShares)) * 100).toFixed(4)}%
+                Pool share: {totalLp > 0n ? ((parseFloat(estimateLpShares(amount)) / Number(totalLp) * 1e6) * 100).toFixed(4) : '0.0000'}%
               </div>
             </div>
           ) : (
@@ -141,10 +180,11 @@ export function LiquidityPanel({ market }: LiquidityPanelProps) {
 
         <button
           onClick={handleAction}
-          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active"
+          disabled={isPending}
+          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ boxShadow: '3px 3px 0px #0a0a0a' }}
         >
-          {mode === 'add' ? 'Add Liquidity' : 'Remove Liquidity'}
+          {isPending ? 'Confirming…' : mode === 'add' ? 'Add Liquidity' : 'Remove Liquidity'}
         </button>
 
         <p className="text-xs text-[#666666] text-center">

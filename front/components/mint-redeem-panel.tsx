@@ -1,7 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { useSendTransaction } from 'wagmi';
 import type { Market } from '@/types/market';
+import { api } from '@/lib/api';
 import toast from 'react-hot-toast';
 
 interface MintRedeemPanelProps {
@@ -11,18 +13,35 @@ interface MintRedeemPanelProps {
 export function MintRedeemPanel({ market }: MintRedeemPanelProps) {
   const [mode, setMode] = useState<'mint' | 'redeem'>('mint');
   const [amount, setAmount] = useState('');
+  const [isPending, setIsPending] = useState(false);
 
-  const handleAction = () => {
+  const { sendTransactionAsync } = useSendTransaction();
+
+  const handleAction = async () => {
     if (!amount || parseFloat(amount) <= 0) {
       toast.error('Please enter an amount');
       return;
     }
-
-    toast.success(
-      `${mode === 'mint' ? 'Minting' : 'Redeeming'} ${amount} USDC - Transaction would be sent to wallet`,
-      { duration: 3000 }
-    );
-    setAmount('');
+    setIsPending(true);
+    try {
+      const amountBase = String(Math.round(parseFloat(amount) * 1_000_000));
+      if (mode === 'mint') {
+        const approveTx = await api.trade.buildApprove(market.address, amountBase);
+        await sendTransactionAsync({ to: approveTx.to as `0x${string}`, data: approveTx.data as `0x${string}` });
+        const mintTx = await api.trade.buildMint(market.address, amountBase, '');
+        const hash = await sendTransactionAsync({ to: mintTx.to as `0x${string}`, data: mintTx.data as `0x${string}` });
+        toast.success(`Minted YES+NO tokens! TX: ${hash.slice(0, 10)}…`);
+      } else {
+        const redeemTx = await api.trade.buildRedeem(market.address, amountBase, '');
+        const hash = await sendTransactionAsync({ to: redeemTx.to as `0x${string}`, data: redeemTx.data as `0x${string}` });
+        toast.success(`Redeemed to USDC! TX: ${hash.slice(0, 10)}…`);
+      }
+      setAmount('');
+    } catch (e) {
+      toast.error(`Transaction failed: ${e}`);
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
@@ -87,10 +106,11 @@ export function MintRedeemPanel({ market }: MintRedeemPanelProps) {
 
         <button
           onClick={handleAction}
-          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active"
+          disabled={isPending}
+          className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active disabled:opacity-40 disabled:cursor-not-allowed"
           style={{ boxShadow: '3px 3px 0px #0a0a0a' }}
         >
-          {mode === 'mint' ? 'Mint Tokens' : 'Redeem to USDC'}
+          {isPending ? 'Confirming\u2026' : mode === 'mint' ? 'Mint Tokens' : 'Redeem to USDC'}
         </button>
 
         <p className="text-xs text-[#666666] text-center">

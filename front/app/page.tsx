@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search } from 'lucide-react';
 import { MarketCard } from '@/components/market-card';
 import { MarketCardSkeleton } from '@/components/market-card-skeleton';
-import { mockMarkets } from '@/lib/mock-data';
+import { api } from '@/lib/api';
+import type { Market } from '@/types/market';
 
 type FilterTab = 'all' | 'active' | 'resolved';
 type SortOption = 'newest' | 'liquidity' | 'ending-soon';
@@ -13,24 +14,44 @@ export default function Home() {
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [sortBy, setSortBy] = useState<SortOption>('ending-soon');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading] = useState(false);
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (isFirst: boolean) => {
+      try {
+        if (isFirst) setIsLoading(true);
+        const data = await api.markets.list();
+        if (!cancelled) setMarkets(data);
+      } catch (e) {
+        if (!cancelled) setError(String(e));
+      } finally {
+        if (!cancelled && isFirst) setIsLoading(false);
+      }
+    };
+    load(true);
+    const interval = setInterval(() => load(false), 15_000);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, []);
 
   const filteredAndSortedMarkets = useMemo(() => {
-    let markets = [...mockMarkets];
+    let mkts = [...markets];
 
     if (filterTab === 'active') {
-      markets = markets.filter((m) => !m.resolved);
+      mkts = mkts.filter((m) => !m.resolved);
     } else if (filterTab === 'resolved') {
-      markets = markets.filter((m) => m.resolved);
+      mkts = mkts.filter((m) => m.resolved);
     }
 
     if (searchQuery) {
-      markets = markets.filter((m) =>
+      mkts = mkts.filter((m) =>
         m.question.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    markets.sort((a, b) => {
+    mkts.sort((a, b) => {
       switch (sortBy) {
         case 'newest':
           return b.createdAt - a.createdAt;
@@ -43,8 +64,8 @@ export default function Home() {
       }
     });
 
-    return markets;
-  }, [filterTab, sortBy, searchQuery]);
+    return mkts;
+  }, [markets, filterTab, sortBy, searchQuery]);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -116,6 +137,12 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-4 p-4 bg-[#1a1a1a] border-2 border-[rgba(248,113,113,0.5)] rounded-lg text-[#F87171] text-sm">
+          Failed to load markets: {error}
+        </div>
+      )}
 
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

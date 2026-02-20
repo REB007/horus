@@ -1,13 +1,13 @@
 'use client';
 
-import { useState } from 'react';
-import { useAccount } from 'wagmi';
+import { useState, useEffect } from 'react';
+import { useAccount, useSendTransaction } from 'wagmi';
 import { Shield, Plus, CheckCircle, Zap } from 'lucide-react';
 import Image from 'next/image';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { mockMarkets, mockTrendingTokens } from '@/lib/mock-data';
+import { api } from '@/lib/api';
 import { formatUSDC } from '@/lib/utils';
-import type { ClankerToken } from '@/types/market';
+import type { ClankerToken, Market } from '@/types/market';
 import toast from 'react-hot-toast';
 
 export default function AdminPage() {
@@ -15,26 +15,65 @@ export default function AdminPage() {
   const [selectedToken, setSelectedToken] = useState<ClankerToken | null>(null);
   const [initialLiquidity, setInitialLiquidity] = useState('1000');
   const [tokenSearch, setTokenSearch] = useState('');
+  const [trendingTokens, setTrendingTokens] = useState<ClankerToken[]>([]);
+  const [markets, setMarkets] = useState<Market[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+  const [resolvingAddr, setResolvingAddr] = useState<string | null>(null);
 
-  const filteredTokens = mockTrendingTokens.filter(
+  const { sendTransactionAsync } = useSendTransaction();
+
+  useEffect(() => {
+    api.tokens.trending().then(setTrendingTokens).catch(() => {});
+    const loadMarkets = () => api.markets.list().then(setMarkets).catch(() => {});
+    loadMarkets();
+    const interval = setInterval(loadMarkets, 15_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const filteredTokens = trendingTokens.filter(
     (t) =>
       t.symbol.toLowerCase().includes(tokenSearch.toLowerCase()) ||
       t.name.toLowerCase().includes(tokenSearch.toLowerCase())
   );
 
-  const handleCreateMarket = () => {
+  const handleCreateMarket = async () => {
     if (!selectedToken) { toast.error('Select a token first'); return; }
     if (!initialLiquidity || parseFloat(initialLiquidity) <= 0) { toast.error('Enter initial liquidity'); return; }
-    toast.success(
-      `Creating "Will $${selectedToken.symbol} be UP in 10 min?" with $${initialLiquidity} USDC — TX would be sent`,
-      { duration: 4000 }
-    );
-    setSelectedToken(null);
-    setInitialLiquidity('1000');
+    if (!selectedToken.pool_address) { toast.error('Token has no Uniswap pool'); return; }
+    setIsCreating(true);
+    try {
+      const result = await api.admin.createMarket({
+        tokenAddress: selectedToken.contract_address,
+        poolAddress: selectedToken.pool_address,
+        token0IsQuote: false,
+        tokenSymbol: selectedToken.symbol,
+        tokenName: selectedToken.name,
+        initialLiquidity: Math.round(parseFloat(initialLiquidity) * 1_000_000),
+      });
+      toast.success(`Market created! ${result.question}`, { duration: 5000 });
+      setSelectedToken(null);
+      setInitialLiquidity('1000');
+      const updated = await api.markets.list();
+      setMarkets(updated);
+    } catch (e) {
+      toast.error(`Failed to create market: ${e}`);
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleResolve = (marketAddress: string, symbol: string) => {
-    toast.success(`Triggering oracle resolution for $${symbol} — contract reads Uniswap V3 price — TX would be sent`, { duration: 3000 });
+  const handleResolve = async (marketAddress: string, symbol: string) => {
+    setResolvingAddr(marketAddress);
+    try {
+      const result = await api.admin.resolveMarket(marketAddress);
+      toast.success(`$${symbol} resolved — ${result.yesWins ? 'YES' : 'NO'} wins!`, { duration: 4000 });
+      const updated = await api.markets.list();
+      setMarkets(updated);
+    } catch (e) {
+      toast.error(`Resolve failed: ${e}`);
+    } finally {
+      setResolvingAddr(null);
+    }
   };
 
   if (!isConnected) {
@@ -50,10 +89,10 @@ export default function AdminPage() {
     );
   }
 
-  const unresolvedExpired = mockMarkets.filter(
+  const unresolvedExpired = markets.filter(
     (m) => !m.resolved && m.resolutionTime <= Math.floor(Date.now() / 1000)
   );
-  const unresolvedActive = mockMarkets.filter(
+  const unresolvedActive = markets.filter(
     (m) => !m.resolved && m.resolutionTime > Math.floor(Date.now() / 1000)
   );
 
@@ -135,11 +174,11 @@ export default function AdminPage() {
 
           <button
             onClick={handleCreateMarket}
-            disabled={!selectedToken}
+            disabled={!selectedToken || isCreating}
             className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active disabled:opacity-40 disabled:cursor-not-allowed"
             style={{ boxShadow: '4px 4px 0px #0a0a0a' }}
           >
-            Launch Market
+            {isCreating ? 'Creating…' : 'Launch Market'}
           </button>
         </div>
 
@@ -166,11 +205,12 @@ export default function AdminPage() {
                   <div className="text-xs text-[#666666] mb-3">Liq: ${formatUSDC(BigInt(market.yesReserve) + BigInt(market.noReserve))} USDC</div>
                   <button
                     onClick={() => handleResolve(market.address, market.tokenSymbol)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg border-2 border-[#0a0a0a] neo-hover neo-active"
+                    disabled={resolvingAddr === market.address}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg border-2 border-[#0a0a0a] neo-hover neo-active disabled:opacity-40 disabled:cursor-not-allowed"
                     style={{ boxShadow: '3px 3px 0px #0a0a0a' }}
                   >
                     <Zap className="h-4 w-4" />
-                    Trigger Oracle Resolution
+                    {resolvingAddr === market.address ? 'Resolving…' : 'Trigger Oracle Resolution'}
                   </button>
                 </div>
               ))}
