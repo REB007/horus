@@ -1,7 +1,7 @@
 'use client';
 
 import { useAccount, useSendTransaction } from 'wagmi';
-import { Wallet, TrendingUp, Trophy } from 'lucide-react';
+import { Wallet, TrendingUp, Trophy, Loader2 } from 'lucide-react';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
@@ -84,7 +84,10 @@ export default function PortfolioPage() {
       </div>
 
       {isLoading && (
-        <div className="text-center py-8 text-[#666666] text-sm">Loading portfolio…</div>
+        <div className="flex flex-col items-center justify-center py-16 gap-3">
+          <Loader2 className="h-8 w-8 text-[#E8C547] animate-spin" />
+          <p className="text-[#999999] text-sm">Loading your positions…</p>
+        </div>
       )}
 
       {claimable.length > 0 && (
@@ -139,7 +142,11 @@ export default function PortfolioPage() {
           <h2 className="text-xl font-semibold text-white">Active Positions</h2>
         </div>
 
-        {!hasPositions ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-6 w-6 text-[#E8C547] animate-spin" />
+          </div>
+        ) : !hasPositions ? (
           <div className="text-center py-12">
             <p className="text-[#999999]">No active positions</p>
             <Link href="/" className="text-[#E8C547] hover:text-[#D4AF37] text-sm mt-2 inline-block">Browse markets →</Link>

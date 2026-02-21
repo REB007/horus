@@ -13,8 +13,12 @@ export interface Market {
   noReserve: string;
   yesPrice: string;
   noPrice: string;
-  snapshotTick: number;
-  currentTick: number;
+  snapshotPrice: string;
+  resolutionPrice: string;
+  oracleEndpoint: string;
+  sourceChainId: string;
+  sourcePool: string;
+  sourceToken: string;
   yesTokenAddress: string;
   noTokenAddress: string;
   createdAt: number;
@@ -58,4 +62,6 @@ export interface ClankerToken {
   img_url: string | null;
   pool_address: string;
   market_cap: number | null;
+  volumeUSD?: number;
+  totalValueLockedUSD?: number;
 }

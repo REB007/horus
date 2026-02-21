@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getMarkets, getMarket } from '../db';
 import { readMarketData, publicClient } from '../services/chain';
-import PredictionMarketV2Abi from '../abi/PredictionMarketV2.json';
+import PredictionMarketV3Abi from '../abi/PredictionMarketV3.json';
 
 const router = Router();
 
@@ -27,8 +27,12 @@ router.get('/', async (_req: Request, res: Response) => {
             noReserve: onChain.noReserve.toString(),
             yesPrice: onChain.yesPrice.toString(),
             noPrice: onChain.noPrice.toString(),
-            snapshotTick: onChain.snapshotTick,
-            currentTick: onChain.currentTick,
+            snapshotPrice: onChain.snapshotPrice,
+            resolutionPrice: onChain.resolutionPrice,
+            oracleEndpoint: onChain.oracleEndpoint,
+            sourceChainId: onChain.sourceChainId.toString(),
+            sourcePool: onChain.sourcePool,
+            sourceToken: onChain.sourceToken,
             createdAt: row.created_at,
             txHash: row.tx_hash,
           };
@@ -48,8 +52,8 @@ router.get('/', async (_req: Request, res: Response) => {
             noReserve: '0',
             yesPrice: '5000',
             noPrice: '5000',
-            snapshotTick: 0,
-            currentTick: 0,
+            snapshotPrice: '0',
+            resolutionPrice: '0',
             createdAt: row.created_at,
             txHash: row.tx_hash,
           };
@@ -83,8 +87,12 @@ router.get('/:address', async (req: Request, res: Response) => {
       noReserve: onChain.noReserve.toString(),
       yesPrice: onChain.yesPrice.toString(),
       noPrice: onChain.noPrice.toString(),
-      snapshotTick: onChain.snapshotTick,
-      currentTick: onChain.currentTick,
+      snapshotPrice: onChain.snapshotPrice,
+      resolutionPrice: onChain.resolutionPrice,
+      oracleEndpoint: onChain.oracleEndpoint,
+      sourceChainId: onChain.sourceChainId.toString(),
+      sourcePool: onChain.sourcePool,
+      sourceToken: onChain.sourceToken,
       yesTokenAddress: onChain.yesTokenAddress,
       noTokenAddress: onChain.noTokenAddress,
       createdAt: row.created_at,
@@ -99,8 +107,8 @@ router.get('/:address/price', async (req: Request, res: Response) => {
   try {
     const addr = req.params.address as `0x${string}`;
     const [yesPrice, noPrice] = await Promise.all([
-      publicClient.readContract({ address: addr, abi: PredictionMarketV2Abi, functionName: 'getYesPrice' }),
-      publicClient.readContract({ address: addr, abi: PredictionMarketV2Abi, functionName: 'getNoPrice' }),
+      publicClient.readContract({ address: addr, abi: PredictionMarketV3Abi, functionName: 'getYesPrice' }),
+      publicClient.readContract({ address: addr, abi: PredictionMarketV3Abi, functionName: 'getNoPrice' }),
     ]);
     res.json({ yesPrice: (yesPrice as bigint).toString(), noPrice: (noPrice as bigint).toString() });
   } catch (err) {

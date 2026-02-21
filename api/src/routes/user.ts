@@ -9,21 +9,26 @@ router.get('/:address/positions', async (req: Request, res: Response) => {
     const userAddr = req.params.address as `0x${string}`;
     const rows = getMarkets();
 
-    // Fetch yesToken/noToken addresses for all markets
-    const marketMeta = await Promise.all(
+    // Fetch yesToken/noToken addresses for all markets — skip V2 markets that lack V3 functions
+    const marketMetaRaw = await Promise.all(
       rows.map(async (row) => {
-        const onChain = await readMarketData(row.address as `0x${string}`);
-        return {
-          address: row.address,
-          tokenSymbol: row.token_symbol,
-          question: row.question,
-          resolved: onChain.resolved,
-          yesWins: onChain.yesWins,
-          yesTokenAddress: onChain.yesTokenAddress,
-          noTokenAddress: onChain.noTokenAddress,
-        };
+        try {
+          const onChain = await readMarketData(row.address as `0x${string}`);
+          return {
+            address: row.address,
+            tokenSymbol: row.token_symbol,
+            question: row.question,
+            resolved: onChain.resolved,
+            yesWins: onChain.yesWins,
+            yesTokenAddress: onChain.yesTokenAddress,
+            noTokenAddress: onChain.noTokenAddress,
+          };
+        } catch {
+          return null;
+        }
       })
     );
+    const marketMeta = marketMetaRaw.filter(Boolean) as NonNullable<typeof marketMetaRaw[number]>[];
 
     const positions = await readUserPositions(userAddr, marketMeta);
 
@@ -53,6 +58,7 @@ router.get('/:address/claimable', async (req: Request, res: Response) => {
 
     const claimable = await Promise.all(
       rows.map(async (row) => {
+        try {
         const onChain = await readMarketData(row.address as `0x${string}`);
         const winningBalance = onChain.yesWins
           ? await import('../services/chain').then(({ publicClient }) =>
@@ -82,6 +88,9 @@ router.get('/:address/claimable', async (req: Request, res: Response) => {
           yesWins: onChain.yesWins,
           claimableAmount: balance.toString(),
         };
+        } catch {
+          return null;
+        }
       })
     );
 

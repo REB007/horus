@@ -1,6 +1,7 @@
 import { publicClient, walletClient, adminAccount } from './chain';
 import { getUnresolvedExpired, markResolved } from '../db';
-import PredictionMarketV2Abi from '../abi/PredictionMarketV2.json';
+import PredictionMarketV3Abi from '../abi/PredictionMarketV3.json';
+import { getUniswapPrice } from './uniswap';
 
 let running = false;
 
@@ -24,14 +25,14 @@ async function resolveMarket(address: string, symbol: string): Promise<void> {
     // Check if already resolved on-chain (could have been resolved manually)
     const onChainResolved = await publicClient.readContract({
       address: addr,
-      abi: PredictionMarketV2Abi,
+      abi: PredictionMarketV3Abi,
       functionName: 'resolved',
     }) as boolean;
 
     if (onChainResolved) {
       const yesWins = await publicClient.readContract({
         address: addr,
-        abi: PredictionMarketV2Abi,
+        abi: PredictionMarketV3Abi,
         functionName: 'yesWins',
       }) as boolean;
       markResolved(address, yesWins);
@@ -39,22 +40,35 @@ async function resolveMarket(address: string, symbol: string): Promise<void> {
       return;
     }
 
-    // Call resolve() — contract reads Uniswap slot0().tick and decides outcome
+    // Read oracle metadata from contract to know which token/chain to price
+    const [sourceChainId, sourceToken] = await Promise.all([
+      publicClient.readContract({ address: addr, abi: PredictionMarketV3Abi, functionName: 'sourceChainId' }),
+      publicClient.readContract({ address: addr, abi: PredictionMarketV3Abi, functionName: 'sourceToken' }),
+    ]);
+
+    // Fetch current price from Uniswap API
+    const resolutionPrice = await getUniswapPrice(
+      Number(sourceChainId as bigint),
+      sourceToken as string,
+    );
+    console.log(`[resolver] $${symbol} fetched price: ${resolutionPrice}`);
+
+    // Call resolve(int256 _resolutionPrice)
     const hash = await walletClient.writeContract({
       account: adminAccount,
       address: addr,
-      abi: PredictionMarketV2Abi,
+      abi: PredictionMarketV3Abi,
       functionName: 'resolve',
-      args: [],
+      args: [resolutionPrice],
     });
 
-    console.log(`[resolver] $${symbol} resolve() sent: ${hash}`);
+    console.log(`[resolver] $${symbol} resolve(${resolutionPrice}) sent: ${hash}`);
     await publicClient.waitForTransactionReceipt({ hash });
 
     // Read outcome from chain
     const yesWins = await publicClient.readContract({
       address: addr,
-      abi: PredictionMarketV2Abi,
+      abi: PredictionMarketV3Abi,
       functionName: 'yesWins',
     }) as boolean;
 

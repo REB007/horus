@@ -16,9 +16,30 @@ const pirataOne = Pirata_One({
   weight: ["400"],
 });
 
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://horus.vercel.app';
+
+const miniAppEmbed = JSON.stringify({
+  version: '1',
+  imageUrl: `${APP_URL}/api/og`,
+  button: {
+    title: 'Predict Now',
+    action: {
+      type: 'launch_frame',
+      name: 'Horus',
+      url: APP_URL,
+      splashImageUrl: `${APP_URL}/icon.png`,
+      splashBackgroundColor: '#0a0a0a',
+    },
+  },
+});
+
 export const metadata: Metadata = {
   title: "Horus - Onchain Prediction Markets",
   description: "Fully onchain prediction markets on Base with USDC collateral",
+  other: {
+    'fc:miniapp': miniAppEmbed,
+    'fc:frame': miniAppEmbed,
+  },
 };
 
 export default function RootLayout({

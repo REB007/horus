@@ -14,4 +14,6 @@ export const config = {
   usdcAddress: (process.env.USDC_ADDRESS || '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238') as `0x${string}`,
   wethAddress: (process.env.WETH_ADDRESS || '0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14') as `0x${string}`,
   port: parseInt(process.env.PORT || '8080', 10),
+  uniswapApiKey: process.env.UNISWAP_API_KEY || '',
+  graphApiKey: process.env.GRAPH_API_KEY || '',
 };

@@ -15,6 +15,11 @@ export interface MarketRow {
   yes_wins: number | null;
   created_at: number;
   tx_hash: string | null;
+  source_chain_id: number | null;
+  source_pool: string | null;
+  source_token: string | null;
+  oracle_endpoint: string | null;
+  snapshot_price: string | null;
 }
 
 let db: Database.Database;
@@ -28,6 +33,15 @@ export function initDb(dbPath = './horus.db'): void {
     'utf8'
   );
   db.exec(migration);
+
+  // V3 migration — add oracle metadata columns (safe to re-run)
+  const m002 = fs.readFileSync(
+    path.join(__dirname, 'migrations', '002_v3_columns.sql'),
+    'utf8'
+  );
+  for (const stmt of m002.split(';').map(s => s.trim()).filter(Boolean)) {
+    try { db.exec(stmt); } catch { /* column already exists */ }
+  }
 }
 
 export function getDb(): Database.Database {
@@ -39,10 +53,12 @@ export function insertMarket(market: Omit<MarketRow, 'resolved' | 'yes_wins'>): 
   getDb().prepare(`
     INSERT OR IGNORE INTO markets
       (address, token_address, token_symbol, token_name, token_img, pool_address,
-       question, resolution_time, resolved, yes_wins, created_at, tx_hash)
+       question, resolution_time, resolved, yes_wins, created_at, tx_hash,
+       source_chain_id, source_pool, source_token, oracle_endpoint, snapshot_price)
     VALUES
       (@address, @token_address, @token_symbol, @token_name, @token_img, @pool_address,
-       @question, @resolution_time, 0, NULL, @created_at, @tx_hash)
+       @question, @resolution_time, 0, NULL, @created_at, @tx_hash,
+       @source_chain_id, @source_pool, @source_token, @oracle_endpoint, @snapshot_price)
   `).run(market);
 }
 

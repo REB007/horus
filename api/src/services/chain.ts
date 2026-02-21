@@ -2,8 +2,8 @@ import { createPublicClient, createWalletClient, http, getContract } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
 import { config } from '../config';
-import PredictionMarketV2Abi from '../abi/PredictionMarketV2.json';
-import MarketFactoryV2Abi from '../abi/MarketFactoryV2.json';
+import PredictionMarketV3Abi from '../abi/PredictionMarketV3.json';
+import MarketFactoryV3Abi from '../abi/MarketFactoryV3.json';
 import OutcomeTokenAbi from '../abi/OutcomeToken.json';
 
 export const publicClient = createPublicClient({
@@ -22,7 +22,7 @@ export const adminAccount = privateKeyToAccount(config.adminPrivateKey);
 export function getMarketContract(address: `0x${string}`) {
   return getContract({
     address,
-    abi: PredictionMarketV2Abi,
+    abi: PredictionMarketV3Abi,
     client: publicClient,
   });
 }
@@ -30,7 +30,7 @@ export function getMarketContract(address: `0x${string}`) {
 export function getFactoryContract() {
   return getContract({
     address: config.factoryAddress,
-    abi: MarketFactoryV2Abi,
+    abi: MarketFactoryV3Abi,
     client: publicClient,
   });
 }
@@ -52,8 +52,12 @@ export interface MarketOnChainData {
   noReserve: bigint;
   yesPrice: bigint;
   noPrice: bigint;
-  snapshotTick: number;
-  currentTick: number;
+  snapshotPrice: string;
+  resolutionPrice: string;
+  oracleEndpoint: string;
+  sourceChainId: bigint;
+  sourcePool: string;
+  sourceToken: string;
   yesTokenAddress: `0x${string}`;
   noTokenAddress: `0x${string}`;
 }
@@ -62,20 +66,26 @@ export async function readMarketData(address: `0x${string}`): Promise<MarketOnCh
   const [
     question, resolutionTime, resolved, yesWins,
     yesReserve, noReserve, yesPrice, noPrice,
-    snapshotTick, currentTick, yesTokenAddress, noTokenAddress,
+    snapshotPrice, resolutionPrice,
+    oracleEndpoint, sourceChainId, sourcePool, sourceToken,
+    yesTokenAddress, noTokenAddress,
   ] = await Promise.all([
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'question' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'resolutionTime' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'resolved' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'yesWins' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'yesReserve' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'noReserve' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'getYesPrice' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'getNoPrice' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'snapshotTick' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'getCurrentTick' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'yesToken' }),
-    publicClient.readContract({ address, abi: PredictionMarketV2Abi, functionName: 'noToken' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'question' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'resolutionTime' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'resolved' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'yesWins' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'yesReserve' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'noReserve' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'getYesPrice' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'getNoPrice' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'snapshotPrice' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'resolutionPrice' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'oracleEndpoint' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'sourceChainId' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'sourcePool' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'sourceToken' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'yesToken' }),
+    publicClient.readContract({ address, abi: PredictionMarketV3Abi, functionName: 'noToken' }),
   ]);
 
   return {
@@ -87,8 +97,12 @@ export async function readMarketData(address: `0x${string}`): Promise<MarketOnCh
     noReserve: noReserve as bigint,
     yesPrice: yesPrice as bigint,
     noPrice: noPrice as bigint,
-    snapshotTick: snapshotTick as number,
-    currentTick: currentTick as number,
+    snapshotPrice: (snapshotPrice as bigint).toString(),
+    resolutionPrice: (resolutionPrice as bigint).toString(),
+    oracleEndpoint: oracleEndpoint as string,
+    sourceChainId: sourceChainId as bigint,
+    sourcePool: sourcePool as string,
+    sourceToken: sourceToken as string,
     yesTokenAddress: yesTokenAddress as `0x${string}`,
     noTokenAddress: noTokenAddress as `0x${string}`,
   };
@@ -115,7 +129,7 @@ export async function readUserPositions(
         }),
         publicClient.readContract({
           address: m.address as `0x${string}`,
-          abi: PredictionMarketV2Abi,
+          abi: PredictionMarketV3Abi,
           functionName: 'lpBalances',
           args: [userAddr],
         }),
@@ -128,17 +142,4 @@ export async function readUserPositions(
       };
     })
   );
-}
-
-// Minimal IUniswapV3Pool ABI for token0 read
-const uniV3PoolAbi = [
-  { name: 'token0', type: 'function', inputs: [], outputs: [{ name: '', type: 'address' }], stateMutability: 'view' },
-] as const;
-
-export async function getPoolToken0(poolAddress: `0x${string}`): Promise<`0x${string}`> {
-  return publicClient.readContract({
-    address: poolAddress,
-    abi: uniV3PoolAbi,
-    functionName: 'token0',
-  }) as Promise<`0x${string}`>;
 }

@@ -1,0 +1,239 @@
+version: v3
+title: "Horus Frontend V3 — Wire to V3 API + Permissionless Creation"
+total_sp: 5
+sp_unit: "1 SP ≈ 30 min"
+
+context: |
+  API V3 is live and tested (64/64 pass).
+  API response now returns snapshotPrice/resolutionPrice instead of snapshotTick/currentTick.
+  API response includes oracle metadata: oracleEndpoint, sourceChainId, sourcePool, sourceToken.
+  createMarket no longer needs token0IsQuote; needs sourceChainId instead.
+  Factory address changed: 0x4759219b2eb34d8645391E6Bd12B15E35b4e1866.
+  Market creation is permissionless in V3 — move from admin-only to public /create page.
+
+key_changes:
+  - "Market type: snapshotTick/currentTick → snapshotPrice/resolutionPrice + oracle metadata"
+  - "Factory address: 0x93ebd... → 0x4759..."
+  - "createMarket params: remove token0IsQuote, add sourceChainId"
+  - "New /create page: permissionless market creation (any wallet)"
+  - "Admin page: remove create section, keep resolve-only"
+  - "Market detail: show USD price instead of tick, add oracle metadata"
+  - "Nav: add Create link"
+
+files:
+  new:
+    - app/create/page.tsx
+  modified:
+    - types/market.ts
+    - lib/config.ts
+    - lib/api.ts
+    - lib/utils.ts
+    - app/admin/page.tsx
+    - app/market/[address]/page.tsx
+    - components/header.tsx
+  unchanged:
+    - app/page.tsx
+    - app/layout.tsx
+    - app/providers.tsx
+    - app/portfolio/page.tsx
+    - components/market-card.tsx
+    - components/market-card-skeleton.tsx
+    - components/trade-panel.tsx
+    - components/mint-redeem-panel.tsx
+    - components/liquidity-panel.tsx
+    - components/claim-panel.tsx
+    - components/custom-connect-button.tsx
+    - lib/wagmi.ts
+
+epics:
+  - id: F1
+    title: "Types + Config"
+    sp: 0.5
+    status: pending
+    stories:
+      - id: F1.1
+        file: types/market.ts
+        sp: 0.25
+        status: pending
+        change: |
+          Remove snapshotTick, currentTick from Market interface.
+          Add snapshotPrice (string), resolutionPrice (string),
+          oracleEndpoint (string), sourceChainId (string),
+          sourcePool (string), sourceToken (string).
+
+      - id: F1.2
+        file: lib/config.ts
+        sp: 0.1
+        status: pending
+        change: "Update factory address to 0x4759219b2eb34d8645391E6Bd12B15E35b4e1866."
+
+      - id: F1.3
+        file: lib/utils.ts
+        sp: 0.15
+        status: pending
+        change: |
+          Add formatPrice18(raw: string): string — converts int256 (18 dec) to USD string.
+
+  - id: F2
+    title: "API Client"
+    sp: 0.5
+    status: pending
+    depends_on: [F1]
+    stories:
+      - id: F2.1
+        file: lib/api.ts
+        sp: 0.25
+        status: pending
+        change: |
+          Update admin.createMarket params:
+          Remove token0IsQuote.
+          Add sourceChainId (optional, default 8453).
+          Update response type to include snapshotPrice.
+
+      - id: F2.2
+        file: lib/api.ts
+        sp: 0.25
+        status: pending
+        change: |
+          Update admin.resolveMarket response type:
+          Add resolutionPrice: string.
+
+  - id: F3
+    title: "Create Market Page"
+    sp: 2
+    status: pending
+    depends_on: [F1, F2]
+    stories:
+      - id: F3.1
+        file: app/create/page.tsx
+        sp: 1.0
+        status: pending
+        change: |
+          New page: permissionless market creation.
+          Token picker (Clanker trending + manual address).
+          Liquidity input (≥ 10 USDC, show min).
+          Source chain selector (default Base 8453).
+          Preview: question, snapshot price (fetched on submit).
+          Submit: POST /api/admin/markets → show result.
+          Wallet connection required.
+
+      - id: F3.2
+        file: app/create/page.tsx
+        sp: 0.5
+        status: pending
+        change: |
+          Wire to API POST /api/admin/markets.
+          Show loading state during TX (approve + create ~20s).
+          Show success with market address + link.
+
+      - id: F3.3
+        file: app/create/page.tsx
+        sp: 0.25
+        status: pending
+        change: "Show snapshot price in preview after API returns."
+
+      - id: F3.4
+        file: components/header.tsx
+        sp: 0.25
+        status: pending
+        change: "Add 'Create' nav link between Markets and Portfolio."
+
+  - id: F4
+    title: "Market Detail Page"
+    sp: 1
+    status: pending
+    depends_on: [F1]
+    stories:
+      - id: F4.1
+        file: app/market/[address]/page.tsx
+        sp: 0.25
+        status: pending
+        change: |
+          Replace tick display in stats row (~line 152):
+          Show price direction (↑/↓) based on resolutionPrice vs snapshotPrice.
+
+      - id: F4.2
+        file: app/market/[address]/page.tsx
+        sp: 0.25
+        status: pending
+        change: |
+          Replace tick sidebar (~lines 188-200):
+          Show "Snapshot Price: $X" and "Resolution Price: $Y" (or "—" if not resolved).
+
+      - id: F4.3
+        file: app/market/[address]/page.tsx
+        sp: 0.25
+        status: pending
+        change: |
+          Add oracle metadata display in sidebar:
+          Oracle endpoint, source chain, source token address.
+
+      - id: F4.4
+        file: app/market/[address]/page.tsx
+        sp: 0.25
+        status: pending
+        change: "Update oracle label: 'Uniswap Price API' instead of 'Uniswap V3'."
+
+  - id: F5
+    title: "Admin Page"
+    sp: 0.5
+    status: pending
+    depends_on: [F3]
+    stories:
+      - id: F5.1
+        file: app/admin/page.tsx
+        sp: 0.25
+        status: pending
+        change: |
+          Remove "Create Market" section (entire left column).
+          Add link to /create page.
+
+      - id: F5.2
+        file: app/admin/page.tsx
+        sp: 0.25
+        status: pending
+        change: |
+          Update auto-resolver description:
+          "resolve(price)" not "resolve()".
+          "Uniswap Price API" not "Uniswap V3 tick".
+
+  - id: F6
+    title: "Smoke Test"
+    sp: 0.5
+    status: pending
+    depends_on: [F3, F4, F5]
+    stories:
+      - id: F6.1
+        sp: 0.1
+        status: pending
+        change: "npm run dev — no errors."
+
+      - id: F6.2
+        sp: 0.1
+        status: pending
+        change: "Market list loads with V3 fields (no tick errors)."
+
+      - id: F6.3
+        sp: 0.1
+        status: pending
+        change: "Market detail shows price instead of tick."
+
+      - id: F6.4
+        sp: 0.2
+        status: pending
+        change: "Create page creates a market (if USDC available)."
+
+implementation_order: "F1 → F2 → F3 → F4 → F5 → F6"
+
+breaking_changes:
+  - "snapshotTick / currentTick removed from Market type"
+  - "token0IsQuote removed from createMarket params"
+  - "Factory address updated"
+  - "Admin page no longer has create section"
+
+notes:
+  - "Market creation is API-mediated (Option A) for fast shipping"
+  - "True permissionless (user signs factory TX) can be added as F3.5 later"
+  - "market-card.tsx doesn't need changes — only uses price/reserve/resolved"
+  - "Old V2 markets show snapshotPrice: '0' — UI should handle gracefully"
+  - "trade-panel, mint-redeem-panel, liquidity-panel, claim-panel all unchanged"

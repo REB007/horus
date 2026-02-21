@@ -1,66 +1,26 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount, useSendTransaction } from 'wagmi';
-import { Shield, Plus, CheckCircle, Zap } from 'lucide-react';
-import Image from 'next/image';
+import { useAccount } from 'wagmi';
+import { Shield, CheckCircle, Zap } from 'lucide-react';
+import Link from 'next/link';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { api } from '@/lib/api';
 import { formatUSDC } from '@/lib/utils';
-import type { ClankerToken, Market } from '@/types/market';
+import type { Market } from '@/types/market';
 import toast from 'react-hot-toast';
 
 export default function AdminPage() {
   const { address, isConnected } = useAccount();
-  const [selectedToken, setSelectedToken] = useState<ClankerToken | null>(null);
-  const [initialLiquidity, setInitialLiquidity] = useState('1000');
-  const [tokenSearch, setTokenSearch] = useState('');
-  const [trendingTokens, setTrendingTokens] = useState<ClankerToken[]>([]);
   const [markets, setMarkets] = useState<Market[]>([]);
-  const [isCreating, setIsCreating] = useState(false);
   const [resolvingAddr, setResolvingAddr] = useState<string | null>(null);
 
-  const { sendTransactionAsync } = useSendTransaction();
-
   useEffect(() => {
-    api.tokens.trending().then(setTrendingTokens).catch(() => {});
     const loadMarkets = () => api.markets.list().then(setMarkets).catch(() => {});
     loadMarkets();
     const interval = setInterval(loadMarkets, 15_000);
     return () => clearInterval(interval);
   }, []);
-
-  const filteredTokens = trendingTokens.filter(
-    (t) =>
-      t.symbol.toLowerCase().includes(tokenSearch.toLowerCase()) ||
-      t.name.toLowerCase().includes(tokenSearch.toLowerCase())
-  );
-
-  const handleCreateMarket = async () => {
-    if (!selectedToken) { toast.error('Select a token first'); return; }
-    if (!initialLiquidity || parseFloat(initialLiquidity) <= 0) { toast.error('Enter initial liquidity'); return; }
-    if (!selectedToken.pool_address) { toast.error('Token has no Uniswap pool'); return; }
-    setIsCreating(true);
-    try {
-      const result = await api.admin.createMarket({
-        tokenAddress: selectedToken.contract_address,
-        poolAddress: selectedToken.pool_address,
-        token0IsQuote: false,
-        tokenSymbol: selectedToken.symbol,
-        tokenName: selectedToken.name,
-        initialLiquidity: Math.round(parseFloat(initialLiquidity) * 1_000_000),
-      });
-      toast.success(`Market created! ${result.question}`, { duration: 5000 });
-      setSelectedToken(null);
-      setInitialLiquidity('1000');
-      const updated = await api.markets.list();
-      setMarkets(updated);
-    } catch (e) {
-      toast.error(`Failed to create market: ${e}`);
-    } finally {
-      setIsCreating(false);
-    }
-  };
 
   const handleResolve = async (marketAddress: string, symbol: string) => {
     setResolvingAddr(marketAddress);
@@ -100,88 +60,10 @@ export default function AdminPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 text-[#E8C547]" style={{ textShadow: '2px 2px 0px rgba(212, 175, 55, 0.3)' }}>Admin Panel</h1>
-        <p className="text-[#999999]">Create 10-minute memecoin markets · Oracle-resolved via Uniswap V3</p>
+        <p className="text-[#999999]">Resolve markets · Monitor auto-resolver · <Link href="/create" className="text-[#E8C547] hover:underline">Create a market →</Link></p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Create Market */}
-        <div className="bg-[#1a1a1a] border border-[rgba(212,175,55,0.4)] rounded-xl p-6" style={{ boxShadow: '4px 4px 0px rgba(212, 175, 55, 0.6)' }}>
-          <div className="flex items-center gap-3 mb-5">
-            <Plus className="h-6 w-6 text-[#E8C547]" />
-            <h2 className="text-xl font-semibold text-white">New 10-min Market</h2>
-          </div>
-
-          {/* Token search */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-[#999999] mb-2">Pick a token (Clanker trending)</label>
-            <input
-              type="text"
-              value={tokenSearch}
-              onChange={(e) => setTokenSearch(e.target.value)}
-              placeholder="Search by name or symbol..."
-              className="w-full px-4 py-2 bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] text-white rounded-lg focus:border-[rgba(212,175,55,0.7)] focus:outline-none transition-colors placeholder-[#666666] text-sm mb-2"
-              style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}
-            />
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {filteredTokens.map((token) => (
-                <button
-                  key={token.contract_address}
-                  onClick={() => setSelectedToken(token)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border-2 transition-all text-left ${
-                    selectedToken?.contract_address === token.contract_address
-                      ? 'border-[rgba(212,175,55,0.7)] bg-[rgba(212,175,55,0.1)]'
-                      : 'border-[rgba(212,175,55,0.15)] bg-[#0a0a0a] hover:border-[rgba(212,175,55,0.4)]'
-                  }`}
-                >
-                  {token.img_url ? (
-                    <Image src={token.img_url} alt={token.symbol} width={28} height={28} className="rounded-full" unoptimized />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-[#2a2a2a] flex items-center justify-center text-xs font-bold text-[#E8C547]">{token.symbol.slice(0, 2)}</div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <span className="text-white font-medium text-sm">${token.symbol}</span>
-                    <span className="text-[#666666] text-xs ml-2">{token.name}</span>
-                  </div>
-                  {token.market_cap && (
-                    <span className="text-[#666666] text-xs font-mono">${(token.market_cap / 1e6).toFixed(1)}M</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Preview */}
-          {selectedToken && (
-            <div className="bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.4)] rounded-lg p-3 mb-4 text-sm" style={{ boxShadow: 'inset 2px 2px 0px rgba(0,0,0,0.5)' }}>
-              <div className="text-[#999999] text-xs mb-1">Market question</div>
-              <div className="text-white font-medium">Will ${selectedToken.symbol} be UP in 10 min?</div>
-              <div className="text-[#666666] text-xs mt-1">Resolves in 10 min · Oracle: Uniswap V3 pool</div>
-            </div>
-          )}
-
-          {/* Liquidity */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-[#999999] mb-2">Initial Liquidity (USDC)</label>
-            <input
-              type="number"
-              value={initialLiquidity}
-              onChange={(e) => setInitialLiquidity(e.target.value)}
-              placeholder="1000"
-              className="w-full px-4 py-3 bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] text-white rounded-lg focus:border-[rgba(212,175,55,0.7)] focus:outline-none transition-colors placeholder-[#666666]"
-              style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}
-            />
-          </div>
-
-          <button
-            onClick={handleCreateMarket}
-            disabled={!selectedToken || isCreating}
-            className="w-full px-6 py-3 bg-gradient-to-br from-[#D4AF37] to-[#E8C547] text-[#0a0a0a] font-semibold rounded-lg transition-all border-2 border-[#0a0a0a] neo-hover neo-active disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ boxShadow: '4px 4px 0px #0a0a0a' }}
-          >
-            {isCreating ? 'Creating…' : 'Launch Market'}
-          </button>
-        </div>
-
+      <div className="grid grid-cols-1 gap-6 mb-6">
         {/* Resolve Markets */}
         <div className="bg-[#1a1a1a] border border-[rgba(212,175,55,0.4)] rounded-xl p-6" style={{ boxShadow: '4px 4px 0px rgba(212, 175, 55, 0.6)' }}>
           <div className="flex items-center gap-3 mb-5">
@@ -241,7 +123,7 @@ export default function AdminPage() {
         <h2 className="text-xl font-semibold text-white mb-4">Auto-Resolver Status</h2>
         <div className="bg-[#0a0a0a] border-2 border-[rgba(212,175,55,0.3)] rounded-lg p-4" style={{ boxShadow: 'inset 2px 2px 0px rgba(0, 0, 0, 0.5)' }}>
           <p className="text-[#666666] text-sm mb-4">
-            Backend polls every 10s for expired markets and calls <span className="font-mono text-[#E8C547]">resolve()</span> — the contract reads the Uniswap V3 tick and determines the outcome on-chain.
+            Backend polls every 10s for expired markets and calls <span className="font-mono text-[#E8C547]">resolve(price)</span> — fetches the current price from the Uniswap Price API and submits it on-chain.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>

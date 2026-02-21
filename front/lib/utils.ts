@@ -20,3 +20,9 @@ export function formatPercentage(value: number): string {
 export function bpsToFloat(bps: string): number {
   return parseInt(bps) / 10000;
 }
+
+export function formatPrice18(raw: string): string {
+  if (!raw || raw === '0') return '0.00';
+  const n = Number(BigInt(raw)) / 1e18;
+  return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}

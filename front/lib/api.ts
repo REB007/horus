@@ -84,20 +84,22 @@ export const api = {
   admin: {
     createMarket: (params: {
       tokenAddress: string;
-      poolAddress: string;
-      token0IsQuote: boolean;
+      poolAddress?: string;
       tokenSymbol?: string;
       tokenName?: string;
       initialLiquidity: number;
+      sourceChainId?: number;
     }) =>
-      fetchAPI<{ marketAddress: string; question: string; resolutionTime: number; txHash: string }>('/api/admin/markets', {
+      fetchAPI<{ marketAddress: string; question: string; resolutionTime: number; snapshotPrice: string; txHash: string }>('/api/admin/markets', {
         method: 'POST',
         body: JSON.stringify(params),
       }),
     resolveMarket: (address: string) =>
-      fetchAPI<{ yesWins: boolean; txHash: string }>(`/api/admin/markets/${address}/resolve`, {
+      fetchAPI<{ yesWins: boolean; resolutionPrice: string; txHash: string }>(`/api/admin/markets/${address}/resolve`, {
         method: 'POST',
         body: JSON.stringify({}),
       }),
+    priceCheck: (chainId: number, tokenAddress: string) =>
+      fetchAPI<{ price: string; priceUsd: string }>(`/api/admin/price-check/${chainId}/${tokenAddress}`),
   },
 };

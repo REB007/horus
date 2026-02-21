@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Clock, Droplets, Activity } from 'lucide-react';
 import { api } from '@/lib/api';
-import { formatUSDC, formatPercentage, bpsToFloat } from '@/lib/utils';
+import { formatUSDC, formatPercentage, bpsToFloat, formatPrice18 } from '@/lib/utils';
 import { TradePanel } from '@/components/trade-panel';
 import { MintRedeemPanel } from '@/components/mint-redeem-panel';
 import { ClaimPanel } from '@/components/claim-panel';
 import { LiquidityPanel } from '@/components/liquidity-panel';
 import type { Market } from '@/types/market';
+import { ShareCastButton } from '@/components/share-cast-button';
 
 function useCountdown(resolutionTime: number) {
   const [secsLeft, setSecsLeft] = useState(resolutionTime - Math.floor(Date.now() / 1000));
@@ -109,10 +110,11 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
                   {market.tokenSymbol.slice(0, 2)}
                 </div>
               )}
-              <div>
+              <div className="flex-1">
                 <div className="text-xs text-[#666666] font-mono">${market.tokenSymbol} · {market.tokenName}</div>
                 <h1 className="text-xl font-bold text-white">{market.question}</h1>
               </div>
+              <ShareCastButton question={market.question} marketAddress={address} tokenSymbol={market.tokenSymbol} />
             </div>
 
             {/* Countdown */}
@@ -150,8 +152,13 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
               </div>
               <div className="flex items-center gap-1.5">
                 <Activity className="h-4 w-4" />
-                <span className="text-[#999999]">tick {market.currentTick > market.snapshotTick ? '↑' : market.currentTick < market.snapshotTick ? '↓' : '—'}</span>
-                <span className="text-[#666666] font-mono text-xs">{market.currentTick}</span>
+                <span className="text-[#999999]">price</span>
+                <span className="text-[#E8C547] font-mono text-xs">${formatPrice18(market.snapshotPrice)}</span>
+                {market.resolved && market.resolutionPrice !== '0' && (
+                  <span className={`font-mono text-xs ${BigInt(market.resolutionPrice) > BigInt(market.snapshotPrice) ? 'text-[#4ADE80]' : BigInt(market.resolutionPrice) < BigInt(market.snapshotPrice) ? 'text-[#F87171]' : 'text-white'}`}>
+                    → ${formatPrice18(market.resolutionPrice)}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -185,18 +192,22 @@ export default function MarketPage({ params }: { params: Promise<{ address: stri
                 <div className="text-[#F87171] font-medium">{formatUSDC(BigInt(market.noReserve ?? '0'))} tokens</div>
               </div>
               <div className="pt-3 border-t border-[rgba(212,175,55,0.2)]">
-                <div className="text-[#999999] mb-1">Oracle (Uniswap V3)</div>
+                <div className="text-[#999999] mb-1">Oracle (Uniswap Price API)</div>
                 <div className="grid grid-cols-2 gap-2 text-xs font-mono">
                   <div>
-                    <div className="text-[#666666]">Snapshot tick</div>
-                    <div className="text-white">{market.snapshotTick}</div>
+                    <div className="text-[#666666]">Snapshot Price</div>
+                    <div className="text-white">${formatPrice18(market.snapshotPrice)}</div>
                   </div>
                   <div>
-                    <div className="text-[#666666]">Current tick</div>
-                    <div className={market.currentTick > market.snapshotTick ? 'text-[#4ADE80]' : market.currentTick < market.snapshotTick ? 'text-[#F87171]' : 'text-white'}>
-                      {market.currentTick}
+                    <div className="text-[#666666]">Resolution Price</div>
+                    <div className={market.resolved && market.resolutionPrice !== '0' ? (BigInt(market.resolutionPrice) > BigInt(market.snapshotPrice) ? 'text-[#4ADE80]' : 'text-[#F87171]') : 'text-white'}>
+                      {market.resolved && market.resolutionPrice !== '0' ? `$${formatPrice18(market.resolutionPrice)}` : '—'}
                     </div>
                   </div>
+                </div>
+                <div className="mt-2 space-y-1 text-xs">
+                  <div className="text-[#666666]">Chain: <span className="text-white">Base ({market.sourceChainId})</span></div>
+                  <div className="text-[#666666]">Token: <span className="text-white font-mono">{market.sourceToken?.slice(0, 6)}...{market.sourceToken?.slice(-4)}</span></div>
                 </div>
               </div>
               <div className="pt-3 border-t border-[rgba(212,175,55,0.2)]">

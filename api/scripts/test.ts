@@ -9,18 +9,22 @@
 const BASE = 'http://localhost:8080';
 
 // Deployed on Ethereum Sepolia
-const MOCK_TOKEN   = '0x1D9EDe32d89FDafA563fD63FffAFE591d303765c';
-const MOCK_POOL    = '0xAb68B4C900214A30425182Cc9385Bca7d3B4Ee28';
-const USDC_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238';
+// MOCK_TOKEN: a real ERC-20 on Base (chainId 8453) that has a Uniswap pool
+// We use WETH on Base as a well-known liquid token for price testing
+const MOCK_TOKEN   = '0x4200000000000000000000000000000000000006'; // WETH on Base
+const MOCK_POOL    = '0xd0b53D9277642d899DF5C87A3966A349A798F224'; // WETH/USDC 0.05% pool on Base (for DB only)
+const USDC_ADDRESS = '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238'; // Sepolia USDC
 const TEST_WALLET  = '0xf4177fCdae0C7E24409AB40217C0e0315E257422';
+const SOURCE_CHAIN_ID = 8453; // Base (where the token trades)
 
-// 1 USDC = 1_000_000 (6 decimals)
-const INITIAL_LIQUIDITY = 1_000_000;
+// 1 USDC = 1_000_000 (6 decimals). V3 MIN_LIQUIDITY = 10 USDC
+const INITIAL_LIQUIDITY = 10_000_000;
 const TRADE_AMOUNT      = 100_000;
 
 let marketAddress = '';
 let passed = 0;
 let failed = 0;
+let skipOnChain = false; // set true if admin wallet has insufficient USDC
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -63,14 +67,30 @@ async function t1_health() {
 }
 
 async function t2_createMarket() {
-  console.log('\n[T2] Create market (admin) — sends on-chain TX, may take ~15s');
+  console.log('\n[T2] Create market (V3) — fetches Uniswap price + sends on-chain TX, may take ~20s');
+
+  // Pre-check: admin wallet must have ≥ MIN_LIQUIDITY USDC (10 USDC = 10_000_000)
+  const balRes = await get(`/api/markets`); // warm up, then check balance via RPC
+  const balCheck = await fetch(`https://eth-sepolia.g.alchemy.com/v2/U819R_P1JKQunW7CJujrd`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_call', params: [{ to: USDC_ADDRESS, data: `0x70a08231000000000000000000000000${TEST_WALLET.slice(2).toLowerCase()}` }, 'latest'], id: 1 }),
+  });
+  const balData = await balCheck.json() as { result: string };
+  const usdcBalance = parseInt(balData.result, 16);
+  console.log(`  → Admin USDC balance: ${usdcBalance} (${(usdcBalance / 1e6).toFixed(2)} USDC)`);
+  if (usdcBalance < INITIAL_LIQUIDITY) {
+    fail('T2 skipped — insufficient USDC', `need ${INITIAL_LIQUIDITY}, have ${usdcBalance}. Top up at https://faucet.circle.com`);
+    skipOnChain = true;
+    return;
+  }
   const { status, body } = await post('/api/admin/markets', {
     tokenAddress: MOCK_TOKEN,
-    poolAddress: MOCK_POOL,
-    token0IsQuote: false,
-    tokenSymbol: 'HORUS',
-    tokenName: 'Mock Horus Coin',
+    poolAddress: MOCK_POOL,       // manual override: bypass Clanker lookup
+    tokenSymbol: 'WETH',
+    tokenName: 'Wrapped Ether',
     initialLiquidity: INITIAL_LIQUIDITY,
+    sourceChainId: SOURCE_CHAIN_ID,
   });
   if (status !== 200) {
     fail('POST /api/admin/markets', body);
@@ -79,9 +99,12 @@ async function t2_createMarket() {
   assert('has marketAddress', typeof body.marketAddress === 'string' && body.marketAddress.startsWith('0x'), body.marketAddress);
   assert('has question', typeof body.question === 'string', body.question);
   assert('has resolutionTime', typeof body.resolutionTime === 'number', body.resolutionTime);
+  assert('has snapshotPrice', typeof body.snapshotPrice === 'string', body.snapshotPrice);
+  assert('snapshotPrice is positive', BigInt(body.snapshotPrice) > 0n, body.snapshotPrice);
   assert('has txHash', typeof body.txHash === 'string' && body.txHash.startsWith('0x'), body.txHash);
   marketAddress = body.marketAddress;
   console.log(`  → Market deployed at ${marketAddress}`);
+  console.log(`  → Snapshot price: ${body.snapshotPrice} (18 dec)`);
 }
 
 async function t3_listMarkets() {
@@ -94,8 +117,10 @@ async function t3_listMarkets() {
   assert('has yesPrice', market && typeof market.yesPrice === 'string', market?.yesPrice);
   assert('has noPrice', market && typeof market.noPrice === 'string', market?.noPrice);
   assert('resolved is false', market && market.resolved === false, market?.resolved);
-  assert('has snapshotTick', market && typeof market.snapshotTick === 'number', market?.snapshotTick);
-  assert('has currentTick', market && typeof market.currentTick === 'number', market?.currentTick);
+  assert('has snapshotPrice', market && typeof market.snapshotPrice === 'string', market?.snapshotPrice);
+  assert('snapshotPrice positive', market && BigInt(market.snapshotPrice) > 0n, market?.snapshotPrice);
+  assert('has resolutionPrice', market && typeof market.resolutionPrice === 'string', market?.resolutionPrice);
+  assert('has sourceChainId', market && typeof market.sourceChainId === 'string', market?.sourceChainId);
 }
 
 async function t4_getMarket() {
@@ -106,6 +131,15 @@ async function t4_getMarket() {
   assert('has yesTokenAddress', typeof body.yesTokenAddress === 'string' && body.yesTokenAddress.startsWith('0x'), body.yesTokenAddress);
   assert('has noTokenAddress', typeof body.noTokenAddress === 'string' && body.noTokenAddress.startsWith('0x'), body.noTokenAddress);
   assert('has poolAddress', typeof body.poolAddress === 'string', body.poolAddress);
+  // V3 oracle metadata
+  assert('has snapshotPrice', typeof body.snapshotPrice === 'string', body.snapshotPrice);
+  assert('has resolutionPrice', typeof body.resolutionPrice === 'string', body.resolutionPrice);
+  assert('has oracleEndpoint', typeof body.oracleEndpoint === 'string' && body.oracleEndpoint.startsWith('https://'), body.oracleEndpoint);
+  assert('has sourceChainId', typeof body.sourceChainId === 'string', body.sourceChainId);
+  assert('has sourcePool', typeof body.sourcePool === 'string', body.sourcePool);
+  assert('has sourceToken', typeof body.sourceToken === 'string' && body.sourceToken.startsWith('0x'), body.sourceToken);
+  console.log(`  → oracleEndpoint: ${body.oracleEndpoint}`);
+  console.log(`  → sourceChainId: ${body.sourceChainId}, sourceToken: ${body.sourceToken}`);
 }
 
 async function t5_getPrice() {
@@ -207,15 +241,20 @@ async function t14_tokens() {
 }
 
 async function t15_resolve() {
-  console.log('\n[T15] Manual resolve (admin) — sends on-chain TX');
+  console.log('\n[T15] Manual resolve (V3) — fetches Uniswap price + sends on-chain TX');
   console.log('  ⚠️  Note: will fail if resolutionTime has not passed yet (10 min window)');
   const { status, body } = await post(`/api/admin/markets/${marketAddress}/resolve`, {});
   if (status === 200) {
     assert('has yesWins', typeof body.yesWins === 'boolean', body.yesWins);
+    assert('has resolutionPrice', typeof body.resolutionPrice === 'string', body.resolutionPrice);
+    assert('resolutionPrice positive', BigInt(body.resolutionPrice) > 0n, body.resolutionPrice);
     assert('has txHash', typeof body.txHash === 'string', body.txHash);
-    // Verify market is now resolved
+    console.log(`  → Resolution price: ${body.resolutionPrice} (18 dec)`);
+    console.log(`  → yesWins: ${body.yesWins}`);
+    // Verify market is now resolved on-chain
     const { body: market } = await get(`/api/markets/${marketAddress}`);
     assert('market resolved on-chain', market.resolved === true, market.resolved);
+    assert('resolutionPrice stored on-chain', market.resolutionPrice !== '0', market.resolutionPrice);
   } else {
     console.log(`  ⚠️  Resolve failed (likely too early): ${JSON.stringify(body)}`);
     console.log('  → Skipping resolve assertions — re-run after resolutionTime passes');
@@ -225,18 +264,28 @@ async function t15_resolve() {
 // ─── runner ─────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('=== Horus API Integration Tests ===');
-  console.log(`API: ${BASE}`);
-  console.log(`Mock token: ${MOCK_TOKEN}`);
-  console.log(`Mock pool:  ${MOCK_POOL}`);
+  console.log('=== Horus API V3 Integration Tests ===');
+  console.log(`API:          ${BASE}`);
+  console.log(`Token:        ${MOCK_TOKEN} (WETH on Base)`);
+  console.log(`Source chain: ${SOURCE_CHAIN_ID} (Base)`);
+  console.log(`Pool (DB):    ${MOCK_POOL}`);
+  console.log(`Test wallet:  ${TEST_WALLET}`);
+  console.log('Note: T2 creates a real on-chain market — costs USDC from admin wallet');
+  console.log('Note: T15 resolve will fail if run within 10 min of T2 (expected)');
+  console.log('─'.repeat(50));
 
   try {
     await t1_health();
     await t2_createMarket();
 
-    if (!marketAddress) {
+    if (!marketAddress && !skipOnChain) {
       console.error('\n❌ Market creation failed — cannot continue remaining tests');
       process.exit(1);
+    }
+    if (skipOnChain) {
+      console.log('\n⚠️  Skipping on-chain tests (T3–T15) — admin wallet needs USDC top-up');
+      console.log('   Faucet: https://faucet.circle.com (select Sepolia)');
+      return;
     }
 
     await t3_listMarkets();

@@ -1,0 +1,19 @@
+{
+  "accountAssociation": {
+    "header": "PLACEHOLDER — generate at https://farcaster.xyz/~/settings/developer-tools",
+    "payload": "PLACEHOLDER",
+    "signature": "PLACEHOLDER"
+  },
+  "miniapp": {
+    "version": "1",
+    "name": "Horus",
+    "iconUrl": "https://horus.vercel.app/icon.png",
+    "homeUrl": "https://horus.vercel.app/",
+    "imageUrl": "https://horus.vercel.app/api/og",
+    "buttonTitle": "Predict Now",
+    "splashImageUrl": "https://horus.vercel.app/icon.png",
+    "splashBackgroundColor": "#0a0a0a",
+    "webhookUrl": "https://horus.vercel.app/api/webhook",
+    "category": "finance"
+  }
+}

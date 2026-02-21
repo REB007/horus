@@ -6,8 +6,18 @@ import { WagmiProvider } from 'wagmi';
 import { RainbowKitProvider, darkTheme } from '@rainbow-me/rainbowkit';
 import { wagmiConfig } from '@/lib/wagmi';
 import { Toaster } from 'react-hot-toast';
+import { useEffect, createContext, useState, useContext } from 'react';
+import { initFarcasterSDK, isInMiniApp } from '@/lib/farcaster';
 
 const queryClient = new QueryClient();
+
+interface FarcasterContextValue {
+  isMiniApp: boolean;
+  farcasterUser: { fid: number; username?: string; displayName?: string } | null;
+}
+
+const FarcasterContext = createContext<FarcasterContextValue>({ isMiniApp: false, farcasterUser: null });
+export const useFarcaster = () => useContext(FarcasterContext);
 
 const customTheme = darkTheme({
   accentColor: '#D4AF37',
@@ -29,14 +39,40 @@ customTheme.shadows.selectedWallet = '3px 3px 0px rgba(212, 175, 55, 0.5)';
 customTheme.shadows.walletLogo = '2px 2px 0px rgba(212, 175, 55, 0.3)';
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const [fcState, setFcState] = useState<FarcasterContextValue>({
+    isMiniApp: false,
+    farcasterUser: null,
+  });
+
+  useEffect(() => {
+    if (!isInMiniApp()) return;
+
+    setFcState((prev) => ({ ...prev, isMiniApp: true }));
+
+    initFarcasterSDK().then((ctx) => {
+      if (ctx?.user) {
+        setFcState({
+          isMiniApp: true,
+          farcasterUser: {
+            fid: ctx.user.fid,
+            username: ctx.user.username,
+            displayName: ctx.user.displayName ?? undefined,
+          },
+        });
+      }
+    });
+  }, []);
+
   return (
-    <WagmiProvider config={wagmiConfig}>
-      <QueryClientProvider client={queryClient}>
-        <RainbowKitProvider theme={customTheme} showRecentTransactions={true}>
-          {children}
-          <Toaster position="bottom-right" />
-        </RainbowKitProvider>
-      </QueryClientProvider>
-    </WagmiProvider>
+    <FarcasterContext.Provider value={fcState}>
+      <WagmiProvider config={wagmiConfig}>
+        <QueryClientProvider client={queryClient}>
+          <RainbowKitProvider theme={customTheme} showRecentTransactions={true}>
+            {children}
+            <Toaster position="bottom-right" />
+          </RainbowKitProvider>
+        </QueryClientProvider>
+      </WagmiProvider>
+    </FarcasterContext.Provider>
   );
 }
