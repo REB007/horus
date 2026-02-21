@@ -1,8 +1,9 @@
 {
+
   "accountAssociation": {
-    "header": "PLACEHOLDER — generate at https://farcaster.xyz/~/settings/developer-tools",
-    "payload": "PLACEHOLDER",
-    "signature": "PLACEHOLDER"
+    "header": "eyJmaWQiOjI4MDY2NDAsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHgwZjRBYmNlNENlODVhRjExRmUwOUE4YTI1QjA2Y2M3NTk1NjkwRDQ0In0",
+    "payload": "eyJkb21haW4iOiJob3J1cy14eXoudmVyY2VsLmFwcCJ9",
+    "signature": "i1dLMaBLQhdS8N1t5PPGL1bpOzK+A5As80qmiUKpp48TDB7qyvh4nTRGEhptpd4I99N6AqcAY/XzNdtPk7TzuRw="
   },
   "miniapp": {
     "version": "1",
