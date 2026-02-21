@@ -4,9 +4,9 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
-import "./OutcomeToken.sol";
+import "../OutcomeToken.sol";
 
-contract PredictionMarket {
+contract PredictionMarketV3 {
     using SafeERC20 for IERC20;
 
     // --- Tokens ---
@@ -23,6 +23,16 @@ contract PredictionMarket {
     // --- Resolution ---
     bool public resolved;
     bool public yesWins;
+
+    // --- Oracle Metadata (stored for future zkTLS verification) ---
+    string public oracleEndpoint;
+    uint256 public sourceChainId;
+    address public sourcePool;
+    address public sourceToken;
+
+    // --- Price (int256, 18 decimals) ---
+    int256 public snapshotPrice;
+    int256 public resolutionPrice;
 
     // --- Metadata ---
     address public admin;
@@ -44,12 +54,12 @@ contract PredictionMarket {
     event Redeemed(address indexed user, uint256 amount);
 
     modifier onlyAdmin() {
-        require(msg.sender == admin, "PredictionMarket: not admin");
+        require(msg.sender == admin, "PredictionMarketV3: not admin");
         _;
     }
 
     modifier notResolved() {
-        require(!resolved, "PredictionMarket: already resolved");
+        require(!resolved, "PredictionMarketV3: already resolved");
         _;
     }
 
@@ -57,12 +67,23 @@ contract PredictionMarket {
         address _usdc,
         address _admin,
         string memory _question,
-        uint256 _resolutionTime
+        uint256 _resolutionTime,
+        string memory _oracleEndpoint,
+        uint256 _sourceChainId,
+        address _sourcePool,
+        address _sourceToken,
+        int256 _snapshotPrice
     ) {
         usdc = IERC20(_usdc);
         admin = _admin;
         question = _question;
         resolutionTime = _resolutionTime;
+
+        oracleEndpoint = _oracleEndpoint;
+        sourceChainId = _sourceChainId;
+        sourcePool = _sourcePool;
+        sourceToken = _sourceToken;
+        snapshotPrice = _snapshotPrice;
 
         yesToken = new OutcomeToken("YES Token", "YES", address(this));
         noToken = new OutcomeToken("NO Token", "NO", address(this));
@@ -87,16 +108,6 @@ contract PredictionMarket {
     }
 
     // ========== CPMM Trading ==========
-    //
-    // Buy: user deposits USDC, receives outcome tokens.
-    //   1. Split USDC into YES+NO (mint to contract)
-    //   2. Compute output using old k = yesR * noR
-    //   3. Transfer desired tokens to user
-    //
-    // Sell: user sends outcome tokens, receives USDC.
-    //   1. Tokens enter the contract (burn from user, mint to contract)
-    //   2. Compute how many complete sets to merge (quadratic formula)
-    //   3. Burn complete sets, send USDC to user
 
     function buy(bool buyYes, uint256 usdcAmount) external notResolved {
         require(usdcAmount > 0, "zero amount");
@@ -104,22 +115,16 @@ contract PredictionMarket {
 
         usdc.safeTransferFrom(msg.sender, address(this), usdcAmount);
 
-        // Apply fee upfront
         uint256 fee = (usdcAmount * FEE_BPS) / BPS;
         uint256 investmentAmount = usdcAmount - fee;
 
-        // Split: mint both outcome tokens to contract
         yesToken.mint(address(this), investmentAmount);
         noToken.mint(address(this), investmentAmount);
 
-        // Compute output using old invariant k = yesR * noR
         uint256 k = yesReserve * noReserve;
         uint256 tokensOut;
 
         if (buyYes) {
-            // Pool goes from [yesR + inv, noR + inv] -> user takes YES
-            // (yesR + inv - tokensOut) * (noR + inv) = k
-            // tokensOut = yesR + inv - k / (noR + inv)
             uint256 newNoReserve = noReserve + investmentAmount;
             tokensOut = yesReserve + investmentAmount - k / newNoReserve;
             yesReserve = yesReserve + investmentAmount - tokensOut;
@@ -140,26 +145,19 @@ contract PredictionMarket {
         require(tokenAmount > 0, "zero amount");
         require(yesReserve > 0 && noReserve > 0, "no liquidity");
 
-        // Apply fee
         uint256 fee = (tokenAmount * FEE_BPS) / BPS;
         uint256 effectiveAmount = tokenAmount - fee;
 
-        // Move tokens into the contract (burn from user, mint to contract)
         uint256 usdcOut;
 
         if (sellYes) {
             yesToken.burn(msg.sender, tokenAmount);
             yesToken.mint(address(this), tokenAmount);
 
-            // Pool goes from [yesR + eff, noR] -> merge m complete sets
-            // New reserves: [yesR + eff - m, noR - m]
-            // (yesR + eff - m) * (noR - m) = k
-            // Quadratic: m^2 - m*(yesR + eff + noR) + eff * noR = 0
             usdcOut = _computeSellReturn(yesReserve, noReserve, effectiveAmount);
             yesReserve = yesReserve + effectiveAmount - usdcOut;
             noReserve = noReserve - usdcOut;
 
-            // Burn complete sets from contract
             yesToken.burn(address(this), usdcOut);
             noToken.burn(address(this), usdcOut);
         } else {
@@ -186,10 +184,8 @@ contract PredictionMarket {
         uint256 effectiveAmount
     ) internal pure returns (uint256) {
         uint256 sum = sellReserve + effectiveAmount + otherReserve;
-        // discriminant = sum^2 - 4 * effectiveAmount * otherReserve
         uint256 discriminant = sum * sum - 4 * effectiveAmount * otherReserve;
         uint256 sqrtDisc = Math.sqrt(discriminant);
-        // Smaller root: (sum - sqrt(discriminant)) / 2
         return (sum - sqrtDisc) / 2;
     }
 
@@ -200,21 +196,16 @@ contract PredictionMarket {
 
         usdc.safeTransferFrom(msg.sender, address(this), usdcAmount);
 
-        // Mint YES + NO tokens to contract
         yesToken.mint(address(this), usdcAmount);
         noToken.mint(address(this), usdcAmount);
 
         uint256 lpShares;
 
         if (totalLpSupply == 0) {
-            // First LP: equal reserves, 50/50 price
             yesReserve = usdcAmount;
             noReserve = usdcAmount;
             lpShares = usdcAmount;
         } else {
-            // Add proportionally to maintain price ratio
-            // alpha = usdcAmount / max(yesReserve, noReserve)
-            // yesAdd = alpha * yesReserve, noAdd = alpha * noReserve
             uint256 maxReserve = yesReserve > noReserve ? yesReserve : noReserve;
             uint256 yesAdd = (usdcAmount * yesReserve) / maxReserve;
             uint256 noAdd = (usdcAmount * noReserve) / maxReserve;
@@ -224,7 +215,6 @@ contract PredictionMarket {
 
             lpShares = (usdcAmount * totalLpSupply) / maxReserve;
 
-            // Return excess tokens to LP provider
             uint256 excessYes = usdcAmount - yesAdd;
             uint256 excessNo = usdcAmount - noAdd;
             if (excessYes > 0) yesToken.transfer(msg.sender, excessYes);
@@ -248,7 +238,6 @@ contract PredictionMarket {
         yesReserve -= yesAmount;
         noReserve -= noAmount;
 
-        // Burn complete pairs for USDC, send excess tokens
         uint256 pairs = yesAmount < noAmount ? yesAmount : noAmount;
         uint256 excessYes = yesAmount - pairs;
         uint256 excessNo = noAmount - pairs;
@@ -266,14 +255,19 @@ contract PredictionMarket {
 
     // ========== Resolution ==========
 
-    function resolve(bool _yesWins) external onlyAdmin notResolved {
+    /// @notice Admin submits the resolution price fetched from Uniswap API.
+    ///         Contract compares to snapshot price to determine outcome.
+    function resolve(int256 _resolutionPrice) external onlyAdmin notResolved {
+        require(block.timestamp >= resolutionTime, "PredictionMarketV3: too early");
+
+        resolutionPrice = _resolutionPrice;
         resolved = true;
-        yesWins = _yesWins;
-        emit MarketResolved(_yesWins);
+        yesWins = _resolutionPrice > snapshotPrice;
+        emit MarketResolved(yesWins);
     }
 
     function claim() external {
-        require(resolved, "PredictionMarket: not resolved");
+        require(resolved, "PredictionMarketV3: not resolved");
 
         uint256 amount;
         if (yesWins) {
@@ -293,7 +287,7 @@ contract PredictionMarket {
     // ========== Views ==========
 
     function getYesPrice() external view returns (uint256) {
-        if (yesReserve == 0 && noReserve == 0) return 5000; // 50%
+        if (yesReserve == 0 && noReserve == 0) return 5000;
         return (noReserve * BPS) / (yesReserve + noReserve);
     }
 

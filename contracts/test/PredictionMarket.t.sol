@@ -2,8 +2,8 @@
 pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
-import "../src/PredictionMarket.sol";
-import "../src/MarketFactory.sol";
+import "../src/v1/PredictionMarket.sol";
+import "../src/v1/MarketFactory.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 /// @dev Mock USDC with 6 decimals

@@ -1,92 +1,149 @@
 # Horus — Hackathon TODO
 
+> **We are building V3.** V2 is deployed and working but superseded.
+> V3 = multi-chain oracle + permissionless creation + zkTLS-ready resolution.
 > Work top-to-bottom. Each phase unblocks the next.
 
 ---
 
-## Phase 1 — Contracts: Deploy to Base Sepolia
+## Status Overview
 
-- [ ] **1.1** Run `forge test --match-path test/v2/*` — confirm V2 tests pass before deploying
-- [x] **1.2** ~~Write `contracts/script/DeployV2.s.sol`~~ — done, see `contracts/script/DeployV2.s.sol`
-- [ ] **1.3** Get Base Sepolia test USDC → https://faucet.circle.com/ (mint to admin wallet)
-- [ ] **1.4** Run from `contracts/` dir:
-  ```
-  forge script script/DeployV2.s.sol --rpc-url https://sepolia.base.org --broadcast --verify
-  ```
-- [ ] **1.5** Copy deployed `MarketFactoryV2` address — you'll need it in steps 2.1 and 3.1
-- [ ] **1.6** Deploy mock ERC-20 + Uniswap V3 pool — script is ready at `contracts/script/DeployMockToken.s.sol`:
-  ```
-  forge script script/DeployMockToken.s.sol --rpc-url https://sepolia.base.org --broadcast
-  ```
-  Script logs `tokenAddress`, `poolAddress`, and `token0IsQuote` — save these for step 2.3
+| Layer | V2 Status | V3 Status |
+|-------|-----------|-----------|
+| **Contracts** | ✅ Deployed on Sepolia | 🔴 Not started — see `contracts/PLAN_V3.md` + `contracts/planv3.yaml` |
+| **API** | ✅ Running locally | 🔴 Needs update for V3 ABI — plan TBD (`api/PLAN_V3.md`) |
+| **Frontend** | ✅ Wired to V2 API | 🟡 Mostly works — just needs new factory address + ABI after V3 deploy |
 
 ---
 
-## Phase 2 — API: Configure & Run Locally
+## V2 (DONE — reference only)
 
-- [ ] **2.1** Copy `api/.env.example` → `api/.env`, fill in:
-  - `FACTORY_ADDRESS` = deployed address from step 1.5
-  - `ADMIN_PRIVATE_KEY` = your admin wallet private key
-  - `RPC_URL` = `https://sepolia.base.org`
-- [ ] **2.2** `cd api && npm install && npm run dev` — confirm it starts, hits `/health`
-- [ ] **2.3** Smoke test: `POST /api/admin/markets` with your mock token address → market created on-chain
-- [ ] **2.4** Confirm auto-resolver logs appear every 10s
+<details>
+<summary>Click to expand V2 completed work</summary>
 
----
+- [x] Contracts deployed: `MarketFactoryV2` at `0x93ebd335231Ae3Ce4859BfD56A9351c11A55d822`
+- [x] USDC (Sepolia): `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238`
+- [x] API running on port 8080 with auto-resolver, Clanker proxy, TX builders
+- [x] Frontend fully wired: all pages use real API, all panels send real TXs
+- [x] Silent background polling (no loading flash)
+- [x] BigInt undefined guards on all market fields
 
-## Phase 3 — Frontend: Wire to Real API
-
-> Work in this exact order — TypeScript will flag broken usages as you go.
-
-- [ ] **3.1** Set `NEXT_PUBLIC_API_URL` in `front/.env.local` to `http://localhost:8080`
-- [ ] **3.2** `lib/api.ts` — add missing endpoints: `buildClaim`, `buildApprove`, `tokens.trending()`, `tokens.get(address)`; fix `admin.createMarket` body `{ tokenAddress, initialLiquidity }`; fix `admin.resolveMarket` (no `yesWins` param)
-- [ ] **3.3** `lib/utils.ts` — add `bpsToFloat(bps: string): number` helper (`parseInt(bps) / 10000`)
-- [ ] **3.4** `app/page.tsx` — replace `mockMarkets` with `api.markets.list()` (useEffect + useState + skeleton)
-- [ ] **3.5** `components/market-card.tsx` — use `bpsToFloat(market.yesPrice)`, show `tokenImg` + `tokenSymbol`, drop `totalVolume`
-- [ ] **3.6** `app/market/[address]/page.tsx` — replace `mockMarkets.find()` with `api.markets.get(address)`, add 10s auto-refresh
-- [ ] **3.7** `hooks/useTx.ts` — create shared hook: call API for TxData → `useSendTransaction` → pending/success/error toast
-- [ ] **3.8** `components/trade-panel.tsx` — wire Buy (approve USDC → buildBuy) and Sell (buildSell) using `useTx`
-- [ ] **3.9** `components/claim-panel.tsx` — remove amount input, wire `buildClaim` → `useTx`
-- [ ] **3.10** `components/mint-redeem-panel.tsx` — wire `buildMint` (approve first) and `buildRedeem` using `useTx`
-- [ ] **3.11** `components/liquidity-panel.tsx` — wire `buildAdd` (approve first) and `buildRemove`, fetch real LP balance from `api.user.getPositions`
-- [ ] **3.12** `app/portfolio/page.tsx` — replace mocks with `api.user.getPositions()` + `api.user.getClaimable()`
-- [ ] **3.13** `app/admin/page.tsx` — rewrite: token picker from `api.tokens.trending()`, single "Trigger Resolve" button (no YES/NO), wire to `api.admin.createMarket({ tokenAddress, initialLiquidity })`
-- [ ] **3.14** Delete `lib/mock-data.ts` — grep for remaining `mock` imports and remove
+</details>
 
 ---
 
-## Phase 4 — E2E Test (local, Base Sepolia)
+## Phase 1 — V3 Contracts (🔴 CURRENT PRIORITY)
 
-- [ ] **4.1** Admin: pick mock token → create market → confirm market appears on homepage
-- [ ] **4.2** User wallet: connect → buy YES → confirm TX on-chain
-- [ ] **4.3** Wait for `resolutionTime` (or set a short window) → confirm auto-resolver fires
-- [ ] **4.4** User: go to portfolio → claim winnings → confirm USDC received
+> **Plan:** `contracts/PLAN_V3.md` · **Sprint:** `contracts/planv3.yaml`
+> **Key changes:** oracle decoupled from chain, 3-path resolution, permissionless creation
+
+- [x] **1.1** `IZkTlsVerifier.sol` — skipped (not in scope per PLAN_V3.md)
+- [x] **1.2** `PredictionMarket_v3.sol` — oracle metadata + submitted price, `resolve(int256)`
+- [x] **1.3** `MarketFactory_v3.sol` — permissionless, `MIN_LIQUIDITY = 10 USDC`, oracle params
+- [x] **1.4** `PredictionMarketV3.t.sol` — 12 tests, all green
+- [x] **1.5** `forge build && forge test --match-path test/v3/*` — 12/12 pass
+- [x] **1.6** Deployed to Sepolia
+- [x] **1.7** `MarketFactoryV3`: `0x4759219b2eb34d8645391E6Bd12B15E35b4e1866`
+
+---
+
+## Phase 2 — V3 API Update (🔴 BLOCKED on Phase 1)
+
+> **Plan:** TBD — `api/PLAN_V3.md`
+> **Key changes:** Uniswap API for price reads, new ABI, `resolveAdmin(price)` instead of `resolve()`
+
+- [ ] **2.1** Copy V3 ABIs from `contracts/out/` → `api/src/abi/`
+- [ ] **2.2** Add `getUniswapPrice(chainId, tokenAddress)` service — calls Uniswap Developer API
+- [ ] **2.3** Update `createMarket` route: fetch snapshot price from Uniswap API, pass oracle metadata
+- [ ] **2.4** Update `resolve` route: fetch resolution price from Uniswap API, call `resolveAdmin(price)`
+- [ ] **2.5** Update auto-resolver to call `resolveAdmin(price)` with Uniswap API price
+- [ ] **2.6** Update `readMarketData()` to read new V3 state vars
+- [ ] **2.7** Update `FACTORY_ADDRESS` in `.env`
+- [ ] **2.8** Smoke test: create market → auto-resolve → verify
+
+---
+
+## Phase 3 — V3 Frontend Update (🟡 BLOCKED on Phase 2)
+
+> **Plan:** TBD — `front/plan/PLAN_V3.md`
+> **Most of the frontend works unchanged** — API abstracts contract changes.
+
+- [ ] **3.1** Update `factory` address in `front/lib/config.ts`
+- [ ] **3.2** Update ABI imports if any frontend components call contracts directly
+- [ ] **3.3** Verify all pages still work with V3 API responses
+- [ ] **3.4** Add WalletConnect project ID (https://cloud.reown.com)
+- [ ] **3.5** Delete `lib/mock-data.ts` (orphaned, nothing imports it)
+
+---
+
+## Phase 4 — E2E Test (local, Ethereum Sepolia)
+
+- [ ] **4.1** Admin: pick token → create market → confirm it appears on homepage
+- [ ] **4.2** User: connect MetaMask (Sepolia) → buy YES → confirm TX on Etherscan
+- [ ] **4.3** Wait for `resolutionTime` → confirm auto-resolver fires with Uniswap API price
+- [ ] **4.4** User: portfolio → claim winnings → confirm USDC received
+- [ ] **4.5** Test emergency resolve: create market, don't resolve, wait 24h (or use `vm.warp` in test)
 
 ---
 
 ## Phase 5 — Deploy
 
-- [ ] **5.1** **Frontend → Vercel**: `cd front && vercel --prod`, set `NEXT_PUBLIC_API_URL` env var to Render URL
+- [ ] **5.1** **Frontend → Vercel**: `cd front && vercel --prod`
+  - Env vars: `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, `NEXT_PUBLIC_CHAIN_ID=11155111`
 - [ ] **5.2** **API → Render**:
-  - Connect GitHub repo, set root to `api/`
-  - Build command: `npm install && npm run build`
-  - Start command: `npm start`
-  - Add all env vars from `api/.env` in Render dashboard
-  - Note: SQLite file is ephemeral on Render free tier — markets reset on redeploy (fine for hackathon)
-- [ ] **5.3** Update `NEXT_PUBLIC_API_URL` in Vercel to point at live Render URL
+  - Root: `api/` · Build: `npm install && npm run build` · Start: `npm start`
+  - Env vars from `api/.env` + `UNISWAP_API_KEY`
+  - SQLite is ephemeral on free tier (fine for hackathon)
+- [ ] **5.3** Update `NEXT_PUBLIC_API_URL` in Vercel → live Render URL
 - [ ] **5.4** Full E2E smoke test on live URLs
 
 ---
 
-## Phase 6 — Farcaster MiniApp (stretch, do last)
+## Phase 6 — Farcaster MiniApp (stretch)
 
-- [ ] **6.1** Scaffold a minimal Farcaster Frame that shows the active market list
-- [ ] **6.2** Add a "Buy YES / Buy NO" action that deep-links to the market page
+- [ ] **6.1** Scaffold Farcaster Frame showing active market list
+- [ ] **6.2** "Buy YES / Buy NO" action → deep-link to market page
 - [ ] **6.3** Register frame URL with Warpcast
+
+---
+
+## Bounties
+
+| Bounty | How we qualify | Status |
+|--------|---------------|--------|
+| **Uniswap API ($5k)** | API uses Uniswap Developer API for snapshot + resolution price reads | 🔴 Phase 2 |
+| **General track** | Fully on-chain prediction market, multi-chain oracle, zkTLS-ready | 🟡 V3 contracts needed |
+
+---
+
+## Architecture (V3)
+
+```
+User picks token (any chain) → API fetches price from Uniswap API → submits to contract
+                                                                          ↓
+Market created on Sepolia ← oracle metadata stored on-chain (endpoint, chainId, pool, token)
+                                                                          ↓
+10 min later → API fetches resolution price from Uniswap API → calls resolveAdmin(price)
+                                                                          ↓
+                                    OR after grace period: anyone submits zkTLS proof
+                                    OR after 24h: anyone calls resolveEmergency()
+```
+
+---
+
+## Key Addresses (Ethereum Sepolia)
+
+| Contract | Address | Version |
+|----------|---------|---------|
+| MarketFactoryV2 | `0x93ebd335231Ae3Ce4859BfD56A9351c11A55d822` | V2 (superseded) |
+| MarketFactoryV3 | `0x4759219b2eb34d8645391E6Bd12B15E35b4e1866` | V3 ✅ |
+| USDC | `0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238` | — |
 
 ---
 
 ## Dropped / Post-Hackathon
 
-- ~~Move API to Next.js~~ — resolver needs a persistent process, keep Express on Render
-- ~~Bonding curve~~ — CPMM works, not worth rewriting mid-hackathon
+- ~~Move API to Next.js~~ — resolver needs persistent process
+- ~~Bonding curve~~ — CPMM works
+- ~~Base Sepolia~~ — switched to Ethereum Sepolia
+- ~~V2 on-chain oracle~~ — replaced by submitted price + Uniswap API in V3
