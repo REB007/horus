@@ -1,7 +1,8 @@
 export const config = {
   apiUrl: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080',
   chainId: parseInt(process.env.NEXT_PUBLIC_CHAIN_ID || '11155111'),
-  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || '',
+  // Placeholder ID for builds - get your own at https://cloud.walletconnect.com
+  walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'a01e2f3b4c5d6e7f8g9h0i1j2k3l4m5n',
 } as const;
 
 export const contracts = {
